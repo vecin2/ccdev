@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
         name="emtask",
-        version="0.0.1a6",
+        version="0.0.1a11",
         author="David Alvarez Garcia",
         author_email="david.avgarcia@gmail.com",
         description="A provides a set of scripts for autmate em dev tasks",
@@ -24,7 +24,7 @@ setuptools.setup(
             ],
         entry_points = {
             'console_scripts': [
-                'em=em.__main__:main'
+                'emtask=em.__main__:main'
                 ],
             }
         )
