@@ -1,0 +1,3 @@
+REM Creating installer...
+echo off
+pyinstaller emtask/__main__.py  --add-data emtask/sql/nubia_commands;emtask/sql/nubia_commands --name emtask
