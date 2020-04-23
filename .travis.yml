@@ -1,4 +1,8 @@
 language: python
+os:
+  - linux
+  - windows
+
 python:
   - "3.8"
   # PyPy versions
