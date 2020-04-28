@@ -1,0 +1,6 @@
+CI
+ pyinstaller create exe and run
+Rewire verb by new process
+
+#- it creates a new process
+- it creates the sql 

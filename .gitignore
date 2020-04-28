@@ -14,3 +14,4 @@ build/
 sql_gen/test_templates/.tmp/
 **/.tempfolder/
 **/test_templates
+*.spec
