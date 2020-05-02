@@ -6,7 +6,8 @@ import  emtask.sql.nubia_commands
 import  emtask.ced.nubia_commands
 import colorama
 
-colorama.init()
+
+colorama.init() #allow termcolor to show colors on windows
 
 def main():
     shell = Nubia(
