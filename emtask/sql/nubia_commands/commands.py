@@ -9,10 +9,14 @@ def run_sql():
     """
     This will generate an sql script from a template and will run it on db
     """
-    ctx = context.get_context()
+    ctx = pepe()
     cprint("Verbose? {}".format(ctx.args.verbose), "yellow")
     return RunSQLCommand().run()
 
     # optional, by default it's 0
     return 0
+
+def pepe():
+    ctx = context.get_context()
+    return ctx
 

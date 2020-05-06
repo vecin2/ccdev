@@ -1,4 +1,4 @@
-from emtask.ced.nubia_commands.commands import override_verb
+from emtask.ced.nubia_commands.commands import rewire_verb
 from sql_gen.commands import CreateSQLTaskCommand
 from sql_gen.database import Connector
 
@@ -23,7 +23,6 @@ class FakeConnector(object):
                                     self.password,
                                     self.database,
                                     port=self.port)
-        
 row ={
       "ENTITY_KEYNAME":"Contact",
       "NAME":"inlineView"
@@ -72,7 +71,7 @@ def testing_with_mock(mocker):
     mockConnection =mocker.patch('emtask.sql.tasks.Connector',autospec=True)
     mockConnection.return_value=FakeConnector()
 
-    override_verb(current_path='Contact.Verbs.InlineView',
+    rewire_verb(current_path='Contact.Verbs.InlineView',
                   new_path='PCContact.Verbs.InlineView')
 
     template_values={"entity_def_id":"Contact",

@@ -11,9 +11,13 @@ def hotupdates():
     """
     This will configure the ced for hotupdates
     """
-    ctx = context.get_context()
+    ctx = mypepe()
     cprint("Verbose? {}".format(ctx.args.verbose), "yellow")
 
     # optional, by default it's 0
     return 0
+
+def mypepe():
+    ctx = context.get_context()
+    return ctx
 
