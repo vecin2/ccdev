@@ -1,9 +1,8 @@
 import sys
 
-from nubia import PluginInterface
+from nubia import Nubia, PluginInterface
 from nubia.internal.blackcmd import CommandBlacklist
 from nubia.internal.cmdbase import AutoCommand
-from nubia import Nubia
 
 
 class TestPlugin(PluginInterface):
@@ -16,7 +15,9 @@ class TestPlugin(PluginInterface):
     def getBlacklistPlugin(self):
         commandBlacklist = CommandBlacklist()
         commandBlacklist.add_blocked_command("blocked")
+
         return commandBlacklist
+
 
 class TestShell(Nubia):
     def __init__(self, commands, name="test_shell"):
@@ -26,6 +27,7 @@ class TestShell(Nubia):
     def run_cli_line(self, raw_line):
         cli_args_list = raw_line.split()
         args = self._pre_run(cli_args_list)
+
         return self.run_cli(args)
 
     def run_interactive_line(self, raw_line, cli_args=None):
@@ -33,4 +35,5 @@ class TestShell(Nubia):
         cli_args_list = cli_args.split()
         args = self._pre_run(cli_args_list)
         io_loop = self._create_interactive_io_loop(args)
+
         return io_loop.parse_and_evaluate(raw_line)
