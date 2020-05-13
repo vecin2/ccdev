@@ -19,15 +19,17 @@ class Verb:
             new_pd_path=new_path,
         )
 
-    @staticmethod
-    def search(path):
-        v_by_repo_path = """SELECT ci.KEYNAME as ENTITY_KEYNAME,v.NAME, pd.REPOSITORY_PATH 
-FROM CCADMIN_IDMAP ci , EVA_VERB v, EVA_PROCESS_DESC_REFERENCE pdr, EVA_PROCESS_DESCRIPTOR PD
-WHERE v.PROCESS_DESC_REF_ID  = pdr.id
-AND pdr.PROCESS_DESCRIPTOR_ID  = pd.id
-AND ci.KEYSET ='ED'
-AND ci.ID =v.ENTITY_DEF_ID
-AND pd.REPOSITORY_PATH ='{}';"""
+    def fetch(self):
+        v_by_repo_path = (
+            "SELECT ci.KEYNAME as ENTITY_KEYNAME, v.NAME, pd.REPOSITORY_PATH"
+            "FROM CCADMIN_IDMAP ci , EVA_VERB v, EVA_PROCESS_DESC_REFERENCE pdr,"
+            "EVA_PROCESS_DESCRIPTOR PD"
+            "WHERE v.PROCESS_DESC_REF_ID  = pdr.id"
+            "AND pdr.PROCESS_DESCRIPTOR_ID  = pd.id"
+            "AND ci.KEYSET ='ED'"
+            "AND ci.ID =v.ENTITY_DEF_ID"
+            "AND pd.REPOSITORY_PATH ='{}';"
+        )
         connector = Connector(
             "localhost",
             "FP8_HFR2_DEV_AD",
@@ -37,14 +39,25 @@ AND pd.REPOSITORY_PATH ='{}';"""
             "oracle",
         )
         db = EMDatabase(connector)
-        table = db.fetch(v_by_repo_path.format(path))
-        v = Verb(table[0]["ENTITY_KEYNAME"], table[0]["NAME"], path)
 
-        return [v]
+        return self.convert_from_db_fetch(
+            db.fetch(v_by_repo_path.format(self._repository_path))
+        )
+
+    def convert_from_db_fetch(self, table):
+        result = []
+
+        for row in table:
+            result.append(
+                Verb(row["ENTITY_KEYNAME"], row["NAME"], self._repository_path)
+            )
+
+        return result
 
 
 def rewire_verb(current_path=None, new_path=None):
-    verbs = Verb.search(current_path)
+    verb = Verb(repository_path=current_path)
+    verbs = verb.fetch()
     verbs[0].rewire(new_path or extension_path(current_path))
 
 
