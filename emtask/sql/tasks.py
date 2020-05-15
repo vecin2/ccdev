@@ -12,7 +12,7 @@ class Verb:
         self._repository_path = repository_path
 
     def rewire(self, new_path):
-        _run_template(
+        _create_sql(
             "rewire_verb.sql",
             entity_def_id=self._entity_keyname,
             verb_name=self._name,
@@ -61,7 +61,7 @@ def rewire_verb(current_path=None, new_path=None):
     verbs[0].rewire(new_path or extension_path(current_path))
 
 
-def _run_template(*args, **kwargs):
+def _create_sql(*args, **kwargs):
     template_values = dict(**kwargs)
     CreateSQLTaskCommand(
         template_name=args[0], run_once=True, template_values=template_values

@@ -18,7 +18,7 @@ def config_hotupdates_attachonstart():
 #
 #    ced_properties_file= project.get_file(filepath=filepath)
 #    assert true == ced_properties_file.contains_once(block)
-class TestProject(object):
+class FakeProject(object):
 
     """Allows to test project files on the filesystem"""
 
@@ -44,13 +44,17 @@ class ProjectFile(object):
 
 @pytest.fixture
 def project(capsys):
-    project = TestProject("/tmp/emProject")
+    project = FakeProject("/tmp/emProject")
     yield project
+
+
+def test_another_dummy():
+    assert 4 == 4
 
 
 @pytest.mark.skip
 def test_some(project):
     block = "hotupdates.attachonstart=true"
-    filepath = "config/tooling/ced/ced.properties"
-    ced_properties_path = project.get_path(filepath=filepath)
+    # filepath = "config/tooling/ced/ced.properties"
+    # ced_properties_path = project.get_path(filepath=filepath)
     assert ced_properties_file.contains_once(block)
