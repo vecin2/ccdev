@@ -3,16 +3,7 @@ from sql_gen.database import Connector, EMDatabase
 
 
 class RewireVerbSQLTask(object):
-    def rewire_verb(self, current_path, new_path):
-        verbs = VerbDB().fetch(repository_path=current_path)
-        self._create_rewire_verb_template(
-            verbs[0], new_path or self._extension_path(current_path)
-        )
-
-    def _extension_path(self, otb_process_path):
-        return "TODO implement"
-
-    def _create_rewire_verb_template(self, verb, new_path):
+    def create_rewire_verb_template(self, verb, new_path):
         self._create_sql(
             "rewire_verb.sql",
             entity_def_id=verb._entity_keyname,

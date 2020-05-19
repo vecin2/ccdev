@@ -1,4 +1,4 @@
-from emtask.sql.tasks import RewireVerbSQLTask
+from emtask.sql.tasks import RewireVerbSQLTask, VerbDB
 
 
 def rewire_verb(current_path=None, new_path=None):
@@ -13,4 +13,10 @@ class RewireVerbTask(object):
         self.sqltask = RewireVerbSQLTask()
 
     def rewire_from_current_path(self, current_path, new_path):
-        self.sqltask.rewire_verb(current_path, new_path)
+        verbs = VerbDB().fetch(repository_path=current_path)
+        self.sqltask.create_rewire_verb_template(
+            verbs[0], new_path or self._extension_path(current_path)
+        )
+
+    def _extension_path(self, otb_process_path):
+        return "TODO implement"
