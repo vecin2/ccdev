@@ -35,7 +35,7 @@ class _DatabaseFactory(object):
     def _get_db_from_properties(
         self, host=None, user=None, password=None, dbname=None, port=None, dbtype=None
     ):
-        config = project.current.config()
+        config = project.get_emproject().config()
         connector = Connector(
             config[host],
             config[user],

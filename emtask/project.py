@@ -14,4 +14,13 @@ class EMProject(object):
         return sqltask_emproject.config(EMConfigID("localdev", machine_name, component))
 
 
-current = None
+_emproject = None
+
+
+def get_emproject():
+    return _emproject
+
+
+def set_emproject(project):
+    global _emproject
+    _emproject = project

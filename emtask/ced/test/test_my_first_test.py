@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-import emtask
 from emtask import project
 from emtask.ced.nubia_commands.commands import rewire_verb
 from emtask.project import EMProject
+from emtasktest.testutils import sample_project
 
 
 class FakeConnector(object):
@@ -63,11 +63,6 @@ class FakeConnector(object):
         return True
 
         return self.server == self._valid_connection["server"]
-        raise InvalidDBConnectionDetailsError()
-
-
-class InvalidDBConnectionDetailsError(object):
-    pass
 
 
 class FakeConnection(object):
@@ -130,24 +125,6 @@ def createsql_cmd(mocker):
     yield createsql_cmd
 
 
-testfolder = Path(os.path.dirname(emtask.__file__)) / ".testproject"
-
-
-def create_file(path, contents=None, lines=None):
-    if lines:
-        contents = "\n".join(lines)
-    finalpath = fullpath(path)
-    os.makedirs(os.path.dirname(finalpath), exist_ok=True)
-    with open(finalpath, "w+") as f:
-        f.write(contents)
-
-    return finalpath
-
-
-def fullpath(relativepath):
-    return testfolder / relativepath
-
-
 # if testfilesystem.exists():
 #    shutil.rmtree(testfilesystem)
 
@@ -167,17 +144,7 @@ def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
         port="1521",
         dbtype="oracle",
     ).fetch_returns(rows)
-    root = testfolder
-    project.current = EMProject(str(root))
-    lines = [
-        "database.host=localhost",
-        "database.user=FP8_HFR2_DEV_AD",
-        "database.pass=FP8_HFR2_DEV_AD",
-        "database.name=XEPDB1",
-        "database.port=1521",
-        "database.type=oracle",
-    ]
-    create_file("work/config/show-config-txt/localdev-localhost-ad.txt", lines=lines)
+    sample_project().build()
 
     rewire_verb(
         current_path="Contact.Verbs.InlineView", new_path="PCContact.Verbs.InlineView"
