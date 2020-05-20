@@ -1,6 +1,8 @@
 from sql_gen.commands import CreateSQLTaskCommand
 from sql_gen.database import Connector, EMDatabase
 
+from emtask.database import addb
+
 
 class RewireVerbSQLTask(object):
     def create_rewire_verb_template(self, verb, new_path):
@@ -35,18 +37,9 @@ class VerbDB(object):
             " AND ci.ID =v.ENTITY_DEF_ID"
             " AND pd.REPOSITORY_PATH ='{}';"
         )
-        connector = Connector(
-            "localhost",
-            "FP8_HFR2_DEV_AD",
-            "FP8_HFR2_DEV_AD",
-            "XEPDB1",
-            "1521",
-            "oracle",
-        )
-        db = EMDatabase(connector)
 
         return self.convert_from_db_fetch(
-            db.fetch(v_by_repo_path.format(repository_path))
+            addb().fetch(v_by_repo_path.format(repository_path))
         )
 
     def convert_from_db_fetch(self, table):

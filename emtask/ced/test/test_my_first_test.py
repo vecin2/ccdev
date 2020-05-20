@@ -1,6 +1,12 @@
+import os
+from pathlib import Path
+
 import pytest
 
+import emtask
+from emtask import project
 from emtask.ced.nubia_commands.commands import rewire_verb
+from emtask.project import EMProject
 
 
 class FakeConnector(object):
@@ -111,7 +117,7 @@ def fake_connector(mocker):
     FakeConnector uses the mock to assert that connection details match
     with those expected
     """
-    mock = mocker.patch("emtask.sql.tasks.Connector", autospec=True)
+    mock = mocker.patch("emtask.database.Connector", autospec=True)
     fake_connector = FakeConnector(mock_connection=mock)
     mock.return_value = fake_connector
     yield fake_connector
@@ -122,6 +128,28 @@ def createsql_cmd(mocker):
     createsql_cmd = mocker.patch("emtask.sql.tasks.CreateSQLTaskCommand")
     createsql_cmd.return_value = createsql_cmd
     yield createsql_cmd
+
+
+testfolder = Path(os.path.dirname(emtask.__file__)) / ".testproject"
+
+
+def create_file(path, contents=None, lines=None):
+    if lines:
+        contents = "\n".join(lines)
+    finalpath = fullpath(path)
+    os.makedirs(os.path.dirname(finalpath), exist_ok=True)
+    with open(finalpath, "w+") as f:
+        f.write(contents)
+
+    return finalpath
+
+
+def fullpath(relativepath):
+    return testfolder / relativepath
+
+
+# if testfilesystem.exists():
+#    shutil.rmtree(testfilesystem)
 
 
 def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
@@ -139,6 +167,17 @@ def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
         port="1521",
         dbtype="oracle",
     ).fetch_returns(rows)
+    root = testfolder
+    project.current = EMProject(str(root))
+    lines = [
+        "database.host=localhost",
+        "database.user=FP8_HFR2_DEV_AD",
+        "database.pass=FP8_HFR2_DEV_AD",
+        "database.name=XEPDB1",
+        "database.port=1521",
+        "database.type=oracle",
+    ]
+    create_file("work/config/show-config-txt/localdev-localhost-ad.txt", lines=lines)
 
     rewire_verb(
         current_path="Contact.Verbs.InlineView", new_path="PCContact.Verbs.InlineView"
