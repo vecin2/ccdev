@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 
 from emtask import project
+from emtask.ced import cedobject_factory
 from emtask.ced.nubia_commands.commands import rewire_verb
+from emtask.ced.tool import CED
 from emtask.project import EMProject
 from emtasktest.testutils import sample_project
 
@@ -52,12 +54,12 @@ class FakeConnector(object):
 
     def _assert_valid_connection(self):
         self.mock_connection.assert_called_once_with(
-            self._valid_connection["server"],
-            self._valid_connection["user"],
-            self._valid_connection["password"],
-            self._valid_connection["database"],
-            self._valid_connection["port"],
-            self._valid_connection["dbtype"],
+            self._valid_connection["database_host"],
+            self._valid_connection["database_user"],
+            self._valid_connection["database_pass"],
+            self._valid_connection["database_name"],
+            self._valid_connection["database_port"],
+            self._valid_connection["database_type"],
         )
 
         return True
@@ -136,15 +138,8 @@ def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
         ("ENTITY_KEYNAME", "NAME", "REPOSITORY_PATH"),
         ("Contact", "inlineView", "Contact.verbs.InlineView"),
     ]
-    fake_connector.with_connection_details(
-        server="localhost",
-        user="FP8_HFR2_DEV_AD",
-        password="FP8_HFR2_DEV_AD",
-        database="XEPDB1",
-        port="1521",
-        dbtype="oracle",
-    ).fetch_returns(rows)
-    sample_project().build()
+    fake_connector.fetch_returns(rows)
+    sample_project(db_connector=fake_connector)
 
     rewire_verb(
         current_path="Contact.Verbs.InlineView", new_path="PCContact.Verbs.InlineView"
@@ -159,3 +154,73 @@ def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
         template_name="rewire_verb.sql", template_values=template_values, run_once=True
     )
     createsql_cmd.run.assert_called_once()
+
+
+# gtProcess.add_field('String','form')
+#    gtProcess.add_import('PRJCustomer.API.EIPRJCustomer','EIPRJCustomer')\
+#             .add_parameter("EIPRJCustomer","customer")
+#             .add_field("EIPRJCustomer","customer")
+#             .add_result("EIPRJContact","entity")
+#             .add_procedure("setup")
+#
+
+
+@pytest.fixture
+def ced():
+    ced = CED(sample_project().get_repo())
+    yield ced
+
+
+def test_when_creating_new_process_save_and_reopen_they_match(ced):
+    process_path = "PRJContact.Implementation.Contact.InlineContact"
+    process = ced.new_process(process_path)
+    process.save()
+
+    assert ced.get_realpath(process_path).exists()
+    assert_file_matches_process(ced, process_path, process)
+
+    # <InstanceFields>
+    #  <StringField
+    #      designNotes=""
+    #      isAttribute="false"
+    #      length="0"
+    #      name="name">
+    #    <StringField_loc
+    #        locale="">
+    #      <Format />
+    #    </StringField_loc>
+    #  </StringField>
+    # </InstanceFields>
+
+
+def test_add_all_basic_types_fields(ced):
+    process = ced.new_process("Test.TestProcess")
+    process.add_field("String", "name1")
+    process.add_field("Number", "referenceNo")
+    process.add_field("Integer", "streetNumber")
+    process.add_field("Float", "partialAmount")
+    process.add_field("Decimal", "totalAmount")  # defaults to precision 42 and scale 1
+    process.add_field("Character", "oneLetter")
+    process.add_field("Date", "dob")
+    assert process.get_field("name1") is not None
+    assert process.get_field("referenceNo") is not None
+    assert process.get_field("streetNumber") is not None
+    assert process.get_field("partialAmount") is not None
+    assert process.get_field("totalAmount") is not None
+    assert process.get_field("oneLetter") is not None
+    assert process.get_field("dob") is not None
+    # todo type Form
+
+
+@pytest.mark.skip
+def test_add_procedure(ced):
+    process = ced.new_process("Test.TestProcess")
+    process.save()
+    process2 = ced.new_process("Test.TestProcess2")
+    process2.save()
+
+
+def assert_file_matches_process(ced, process_path, process):
+    loaded_process = ced.open(process_path)
+    assert process.get_imports() == loaded_process.get_imports()
+    assert str(loaded_process) == str(process)
