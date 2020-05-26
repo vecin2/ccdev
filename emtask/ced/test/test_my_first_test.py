@@ -156,15 +156,6 @@ def testing_with_mock(fake_connector, createsql_cmd, autospec=True):
     createsql_cmd.run.assert_called_once()
 
 
-# gtProcess.add_field('String','form')
-#    gtProcess.add_import('PRJCustomer.API.EIPRJCustomer','EIPRJCustomer')\
-#             .add_parameter("EIPRJCustomer","customer")
-#             .add_field("EIPRJCustomer","customer")
-#             .add_result("EIPRJContact","entity")
-#             .add_procedure("setup")
-#
-
-
 @pytest.fixture
 def ced():
     ced = CED(sample_project().get_repo())
@@ -228,23 +219,27 @@ def test_add_result(ced):
     process = ced.new_process("Test.TestProcessResult")
     process.add_field("String", "street")
     process.add_field("Number", "streetNumber")
+
     process.mark_as_result("street")
     process.mark_as_result("streetNumber")
+
     assert process.get_field("street") is not None
     assert "street" == process.get_results()[0].get("name")
     assert process.get_field("streetNumber") is not None
     assert "streetNumber" == process.get_results()[1].get("name")
 
 
-@pytest.mark.skip
 def test_add_procedure(ced):
-    process = ced.new_process("Test.TestProcess")
+    process = ced.new_process("Test.TestProcessResult")
+    process.add_general_procedure("setUp")
+
     process.save()
-    process2 = ced.new_process("Test.TestProcess2")
-    process2.save()
+
+    procedure = process.get_procedure("setUp")
+    assert procedure is not None
+    assert "Test.TestProcessResult.setUp" == procedure.path
 
 
 def assert_file_matches_process(ced, process_path, process):
     loaded_process = ced.open(process_path)
-    assert process.get_imports() == loaded_process.get_imports()
     assert str(loaded_process) == str(process)

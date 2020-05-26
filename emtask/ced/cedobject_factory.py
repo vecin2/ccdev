@@ -49,8 +49,92 @@ def new_process_etree():
     return root
 
 
+# <?xml version="1.0" encoding="UTF-8"?>
+# <!DOCTYPE Procedure [] >
+#  <Procedure
+#      designNotes="Undefined"
+#      isTPL="false"
+#      language="EcmaScript"
+#      name="setUp"
+#      nested="false"
+#      version="10">
+#    <ReferenceParameters />
+#    <ProcedureLocals />
+#    <Verbatim
+#        fieldName="text">
+# <![CDATA[account = new EIAccount();
+# account.customerID =817002;
+# account.sequence=1
+# ]]>
+#    </Verbatim>
+#  </Procedure>
+def new_procedure_etree(name):
+    procedure = ET.Element(
+        "Procedure",
+        designNotes="",
+        isTPL="false",
+        Language="EcmaScript",
+        name=name,
+        nested="false",
+        version="10",
+    )
+    ET.SubElement(procedure, "ReferenceParameters")
+    ET.SubElement(procedure, "ProcedureLocals")
+    ET.SubElement(procedure, "Verbatim", fieldName="text")
+
+    return procedure
+
+
 def make_process(root, path):
     return Process(root, path, ET.ElementTree(new_process_etree()))
+
+
+def make_procedure(root, path):
+    procedure_name = path.rsplit(".", 1)[1]
+
+    return Procedure(root, path, ET.ElementTree(new_procedure_etree(procedure_name)))
+
+
+def parse(ced, path):
+    etree = ET.parse(str(ced.get_realpath(path)))
+
+    return Process(ced.root, path, etree)
+
+
+class Procedure(object):
+    """docstring for Procedure"""
+
+    def __init__(self, root, path, etree):
+        self.root = root
+        self._etree = etree
+        self.root_node = self._etree.getroot()
+        self.path = path
+
+    def name(self):
+        return self.root_node.get("name")
+
+    def save(self):
+        realpath = self.realpath()
+
+        if not realpath.parent.exists():
+            realpath.parent.mkdir(parents=True, exist_ok=True)
+
+        realpath.write_text(str(self))
+
+    def realpath(self):
+        relative_path = Path(self.path.replace(".", os.sep) + ".xml")
+        realpath = self.root / relative_path
+
+        return realpath
+
+    def __str__(self):
+        return ET.tostring(
+            self._etree,
+            pretty_print=True,
+            doctype="<!DOCTYPE Procedure [] >",
+            encoding="UTF-8",
+            xml_declaration=True,
+        ).decode("utf-8")
 
 
 class Process(object):
@@ -61,6 +145,7 @@ class Process(object):
         self._etree = etree
         self.root_node = self._etree.getroot()
         self.path = path
+        self.procedures = []
 
     def add_field(self, field_type, name):
         process_def = self.root_node.find("ProcessDefinition")
@@ -114,8 +199,37 @@ class Process(object):
 
         return None
 
-    def get_imports(self):
-        return []
+    #      <InstanceProcedures
+    #          name="">
+    #        <Procedure
+    #            name="setUp"
+    #            nested="true" />
+    #      </InstanceProcedures>
+    def add_general_procedure(self, procedure_name):
+        process_def = self.root_node.find("ProcessDefinition")
+        instance_procedures = process_def.find("InstanceProcedures")
+
+        if not instance_procedures:
+            instance_procedures = ET.SubElement(
+                process_def, "InstanceProcedures", name=""
+            )
+
+        ET.SubElement(
+            instance_procedures, "Procedure", name=procedure_name, nested="true"
+        )
+        self.procedures.append(
+            make_procedure(self.root, self.path + "." + procedure_name)
+        )
+
+    def get_procedure(self, procedure_name):
+        process_def = self.root_node.find("ProcessDefinition")
+        instance_procedures = process_def.find("InstanceProcedures")
+
+        for procedure in self.procedures:
+            if procedure.name() == procedure_name:
+                return procedure
+
+        return None
 
     def realpath(self):
         relative_path = Path(self.path.replace(".", os.sep) + ".xml")
@@ -131,6 +245,18 @@ class Process(object):
 
         realpath.write_text(str(self))
 
+        for procedure in self.procedures:
+            procedure.save()
+
+    def __str__(self):
+        return ET.tostring(
+            self._etree,
+            pretty_print=True,
+            doctype="<!DOCTYPE ProcessDefinition [] >",
+            encoding="UTF-8",
+            xml_declaration=True,
+        ).decode("utf-8")
+
     def __eq__(self, other):
         if not isinstance(other, Process):
             return False
@@ -145,9 +271,3 @@ class Process(object):
             encoding="UTF-8",
             xml_declaration=True,
         ).decode("utf-8")
-
-
-def parse(ced, path):
-    etree = ET.parse(str(ced.get_realpath(path)))
-
-    return Process(ced.root, path, etree)
