@@ -14,7 +14,8 @@ def sample_project(db_connector=None):
 class SampleProjectBuilder(object):
     def __init__(self, db_connector=None):
         self.db_connector = db_connector
-        path = "/mnt/c/em/projects/sample_project"
+        script_dir = os.path.dirname(__file__)
+        path = script_dir + os.sep + "sample_project"
         self._default_root = Path(path)
 
         if self._default_root.exists():
