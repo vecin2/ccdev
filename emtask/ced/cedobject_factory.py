@@ -80,6 +80,28 @@ class Process(object):
 
         ET.SubElement(locale, "Format")
 
+    def mark_as_parameter(self, field_name):
+        self._mark_field(field_name, "Parameter")
+
+    def mark_as_result(self, field_name):
+        self._mark_field(field_name, "Result")
+
+    def _mark_field(self, field_name, tagname):
+        process_def = self.root_node.find("ProcessDefinition")
+        attrib = {"from": "", "name": field_name, "to": ""}
+        ET.SubElement(process_def, tagname, attrib)
+
+    def get_parameters(self):
+        return self._get_params_or_results("Parameter")
+
+    def get_results(self):
+        return self._get_params_or_results("Result")
+
+    def _get_params_or_results(self, tagname):
+        process_def = self.root_node.find("ProcessDefinition")
+
+        return process_def.findall(tagname)
+
     def get_field(self, name):
         for node in self.root_node.iter():
             if node.tag == "InstanceFields":

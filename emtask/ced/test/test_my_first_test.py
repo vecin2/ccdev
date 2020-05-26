@@ -212,6 +212,30 @@ def test_add_all_basic_types_fields(ced):
     # todo type Form
 
 
+def test_add_parameters(ced):
+    process = ced.new_process("Test.TestProcessParameter")
+    process.add_field("String", "street")
+    process.add_field("Number", "streetNumber")
+    process.mark_as_parameter("street")
+    process.mark_as_parameter("streetNumber")
+    assert process.get_field("street") is not None
+    assert "street" == process.get_parameters()[0].get("name")
+    assert process.get_field("streetNumber") is not None
+    assert "streetNumber" == process.get_parameters()[1].get("name")
+
+
+def test_add_result(ced):
+    process = ced.new_process("Test.TestProcessResult")
+    process.add_field("String", "street")
+    process.add_field("Number", "streetNumber")
+    process.mark_as_result("street")
+    process.mark_as_result("streetNumber")
+    assert process.get_field("street") is not None
+    assert "street" == process.get_results()[0].get("name")
+    assert process.get_field("streetNumber") is not None
+    assert "streetNumber" == process.get_results()[1].get("name")
+
+
 @pytest.mark.skip
 def test_add_procedure(ced):
     process = ced.new_process("Test.TestProcess")
