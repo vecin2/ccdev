@@ -11,5 +11,6 @@ install:
   - wget https://github.com/cybergrind/pymssql/releases/download/2.2.0.dev0/pymssql-2.2.0.dev0-cp36-cp36m-linux_x86_64.whl
   - pip install pymssql-2.2.0.dev0-cp36-cp36m-linux_x86_64.whl
   - pip install -r requirements.txt --extra-index-url https://test.pypi.org/simple/
+  - pip install . # install emtask package
 # command to run tests
 script: pytest
