@@ -3,4 +3,3 @@ pytest==5.4.1
 python-nubia==0.2b2
 sqltask==0.0.1a46
 pytest-mock==3.1.0
-pytest
