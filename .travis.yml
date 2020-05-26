@@ -3,12 +3,13 @@ os:
   - linux
 
 python:
-  - "3.6" # issue with pymsql when using 3.8
+  - "3.h" # issue with pymsql when using 3.8
   # PyPy versions
   - "pypy3"  # currently Python 3.6.1,  PyPy 7.1.1-beta0
 # command to install dependencies
 install:
-  - pip install --upgrade cython
+  - wget https://github.com/cybergrind/pymssql/releases/download/2.2.0.dev0/pymssql-2.2.0.dev0-cp36-cp36m-linux_x86_64.whl
+  - pip install pymssql-2.2.0.dev0-cp36-cp36m-linux_x86_64.whl
   - pip install -r requirements.txt --extra-index-url https://test.pypi.org/simple/
 # command to run tests
 script: pytest
