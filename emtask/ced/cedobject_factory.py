@@ -49,25 +49,6 @@ def new_process_etree():
     return root
 
 
-# <?xml version="1.0" encoding="UTF-8"?>
-# <!DOCTYPE Procedure [] >
-#  <Procedure
-#      designNotes="Undefined"
-#      isTPL="false"
-#      language="EcmaScript"
-#      name="setUp"
-#      nested="false"
-#      version="10">
-#    <ReferenceParameters />
-#    <ProcedureLocals />
-#    <Verbatim
-#        fieldName="text">
-# <![CDATA[account = new EIAccount();
-# account.customerID =817002;
-# account.sequence=1
-# ]]>
-#    </Verbatim>
-#  </Procedure>
 def new_procedure_etree(name):
     procedure = ET.Element(
         "Procedure",
@@ -101,17 +82,12 @@ def parse(ced, path):
     return Process(ced.root, path, etree)
 
 
-class Procedure(object):
-    """docstring for Procedure"""
-
+class CEDResource(object):
     def __init__(self, root, path, etree):
         self.root = root
         self._etree = etree
         self.root_node = self._etree.getroot()
         self.path = path
-
-    def name(self):
-        return self.root_node.get("name")
 
     def save(self):
         realpath = self.realpath()
@@ -131,20 +107,30 @@ class Procedure(object):
         return ET.tostring(
             self._etree,
             pretty_print=True,
-            doctype="<!DOCTYPE Procedure [] >",
+            doctype="<!DOCTYPE " + self._get_doctype() + " [] >",
             encoding="UTF-8",
             xml_declaration=True,
         ).decode("utf-8")
 
 
-class Process(object):
+class Procedure(CEDResource):
+    """docstring for Procedure"""
+
+    def __init__(self, root, path, etree):
+        super().__init__(root, path, etree)
+
+    def name(self):
+        return self.root_node.get("name")
+
+    def _get_doctype(self):
+        return "Procedure"
+
+
+class Process(CEDResource):
     """It allows creating and editing a GTProcess object"""
 
     def __init__(self, root, path, etree):
-        self.root = root
-        self._etree = etree
-        self.root_node = self._etree.getroot()
-        self.path = path
+        super().__init__(root, path, etree)
         self.procedures = []
 
     def add_field(self, field_type, name):
@@ -199,12 +185,6 @@ class Process(object):
 
         return None
 
-    #      <InstanceProcedures
-    #          name="">
-    #        <Procedure
-    #            name="setUp"
-    #            nested="true" />
-    #      </InstanceProcedures>
     def add_general_procedure(self, procedure_name):
         process_def = self.root_node.find("ProcessDefinition")
         instance_procedures = process_def.find("InstanceProcedures")
@@ -222,52 +202,23 @@ class Process(object):
         )
 
     def get_procedure(self, procedure_name):
-        process_def = self.root_node.find("ProcessDefinition")
-        instance_procedures = process_def.find("InstanceProcedures")
-
         for procedure in self.procedures:
             if procedure.name() == procedure_name:
                 return procedure
 
         return None
 
-    def realpath(self):
-        relative_path = Path(self.path.replace(".", os.sep) + ".xml")
-        realpath = self.root / relative_path
-
-        return realpath
-
     def save(self):
-        realpath = self.realpath()
-
-        if not realpath.parent.exists():
-            realpath.parent.mkdir(parents=True, exist_ok=True)
-
-        realpath.write_text(str(self))
+        super().save()
 
         for procedure in self.procedures:
             procedure.save()
 
-    def __str__(self):
-        return ET.tostring(
-            self._etree,
-            pretty_print=True,
-            doctype="<!DOCTYPE ProcessDefinition [] >",
-            encoding="UTF-8",
-            xml_declaration=True,
-        ).decode("utf-8")
+    def _get_doctype(self):
+        return "ProcessDefinition"
 
     def __eq__(self, other):
         if not isinstance(other, Process):
             return False
 
         return str(self) == str(other)
-
-    def __str__(self):
-        return ET.tostring(
-            self._etree,
-            pretty_print=True,
-            doctype="<!DOCTYPE ProcessDefinition [] >",
-            encoding="UTF-8",
-            xml_declaration=True,
-        ).decode("utf-8")
