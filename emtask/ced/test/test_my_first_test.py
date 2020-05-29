@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import lxml.etree as ET
 import pytest
 
 from emtask import project
@@ -170,18 +171,24 @@ def test_when_creating_new_process_save_and_reopen_they_match(ced):
     assert ced.get_realpath(process_path).exists()
     assert_file_matches_process(ced, process_path, process)
 
-    # <InstanceFields>
-    #  <StringField
-    #      designNotes=""
-    #      isAttribute="false"
-    #      length="0"
-    #      name="name">
-    #    <StringField_loc
-    #        locale="">
-    #      <Format />
-    #    </StringField_loc>
-    #  </StringField>
-    # </InstanceFields>
+
+def test_create_process_wrapper(ced):
+    process_path = "PRJContact.Implementation.Contact.InlineContact"
+    process = ced.new_process(process_path)
+    process.add_field("String", "name1")
+    process.mark_as_parameter("name1")
+    wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
+    wrapper_process = process.wrapper(wrapper_path)
+
+    assert wrapper_path == wrapper_process.path
+    expected = wrapper_process.get_parameters()[0]
+    actual = process.get_parameters()[0]
+    assert_equal_node(expected, actual)
+    assert wrapper_process.get_results() == wrapper_process.get_results()
+
+
+def assert_equal_node(expected, actual):
+    assert ET.tostring(expected) == ET.tostring(actual)
 
 
 def test_add_all_basic_types_fields(ced):
@@ -238,6 +245,20 @@ def test_add_procedure(ced):
     procedure = process.get_procedure("setUp")
     assert procedure is not None
     assert "Test.TestProcessResult.setUp" == procedure.path
+
+
+def test_add_procedure2(ced):
+    procedure = cedobject_factory.make_procedure(
+        ced.root, "Test.TestBuildProcedure.procedure1"
+    )
+    procedure.add_local_vars(age="Integer")
+    # process.add_general_procedure(
+    #    "setUp",
+    #    parameter="Integer accountId",
+    #    local_vars="Integer age, TestEmTaskProcess process",
+    #    returns="Integer",
+    #    contents="var i=0",
+    # )
 
 
 def assert_file_matches_process(ced, process_path, process):

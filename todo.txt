@@ -6,3 +6,8 @@ Rewire verb by new process
 #- it creates a new process
 - it creates the sql
 entity_def_id --> entity_keyname
+
+
+#Add parameter to procedure
+#Add local variable to procedure
+#Add result to procedure

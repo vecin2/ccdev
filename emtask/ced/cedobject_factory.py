@@ -86,7 +86,7 @@ class CEDResource(object):
     def __init__(self, root, path, etree):
         self.root = root
         self._etree = etree
-        self.root_node = self._etree.getroot()
+        self.rootnode = self._etree.getroot()
         self.path = path
 
     def save(self):
@@ -120,10 +120,22 @@ class Procedure(CEDResource):
         super().__init__(root, path, etree)
 
     def name(self):
-        return self.root_node.get("name")
+        return self.rootnode.get("name")
 
     def _get_doctype(self):
         return "Procedure"
+
+    # <ProcedureLocals>
+    #  <IntegerField
+    #      name="age" />
+    # </ProcedureLocals>
+    def add_local_vars(self, **kwargs):
+        for key, value in kwargs.items():
+            local_vars = ET.SubElement(self.rootnode, "ProcedureLocals")
+            ET.SubElement(local_vars, "IntegerField", name=key)
+
+    def local_vars(self):
+        self.rootnode
 
 
 class Process(CEDResource):
@@ -134,7 +146,7 @@ class Process(CEDResource):
         self.procedures = []
 
     def add_field(self, field_type, name):
-        process_def = self.root_node.find("ProcessDefinition")
+        process_def = self.rootnode.find("ProcessDefinition")
         instance_fields = process_def.find("InstanceFields")
 
         if not instance_fields:
@@ -158,7 +170,7 @@ class Process(CEDResource):
         self._mark_field(field_name, "Result")
 
     def _mark_field(self, field_name, tagname):
-        process_def = self.root_node.find("ProcessDefinition")
+        process_def = self.rootnode.find("ProcessDefinition")
         attrib = {"from": "", "name": field_name, "to": ""}
         ET.SubElement(process_def, tagname, attrib)
 
@@ -169,12 +181,12 @@ class Process(CEDResource):
         return self._get_params_or_results("Result")
 
     def _get_params_or_results(self, tagname):
-        process_def = self.root_node.find("ProcessDefinition")
+        process_def = self.rootnode.find("ProcessDefinition")
 
         return process_def.findall(tagname)
 
     def get_field(self, name):
-        for node in self.root_node.iter():
+        for node in self.rootnode.iter():
             if node.tag == "InstanceFields":
                 instance_fields = node
 
@@ -186,7 +198,7 @@ class Process(CEDResource):
         return None
 
     def add_general_procedure(self, procedure_name):
-        process_def = self.root_node.find("ProcessDefinition")
+        process_def = self.rootnode.find("ProcessDefinition")
         instance_procedures = process_def.find("InstanceProcedures")
 
         if not instance_procedures:
@@ -207,6 +219,15 @@ class Process(CEDResource):
                 return procedure
 
         return None
+
+    def wrapper(self, path):
+        process = make_process(self.root, path)
+
+        for param in self.get_parameters():
+            process.add_field("String", param.get("name"))
+            process.mark_as_parameter(param.get("name"))
+
+        return process
 
     def save(self):
         super().save()
