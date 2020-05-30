@@ -160,6 +160,12 @@ class Process(CEDResource):
         super().__init__(root, path, etree)
         self.procedures = []
 
+    def add_import(self, import_elem):
+        self.rootnode.append(import_elem)
+
+    def get_imports(self):
+        return self.rootnode.findall("ImportDeclaration")
+
     def add_field(self, field_node):
         process_def = self.rootnode.find("ProcessDefinition")
         instance_fields = process_def.find("InstanceFields")

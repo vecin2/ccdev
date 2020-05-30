@@ -211,6 +211,35 @@ def test_add_all_basic_types_fields(ced):
     # todo type Form
 
 
+# <ObjectField
+#    designNotes=""
+#    isAggregate="false"
+#    isAttribute="false"
+#    name="aProcess">
+#  <ObjectField_loc
+#      locale="">
+#    <Format />
+#  </ObjectField_loc>
+#  <TypeDefinitionReference
+#      name="AProcess2"
+#      nested="false" />
+# </ObjectField>
+def test_add_object_field(ced):
+    childprocess = ced.new_process("Test.TestChildProcess")
+    process = ced.new_process("Test.TestMainProcess")
+    field = make_object_field("TestChildProcess")
+    process.add_field(field)
+    returned_field = process.get_field("childProcess")
+    assert_equal_node(returned_field, field)
+
+
+def make_object_field(name):
+    field = of.make_field("Object", "childProcess")
+    ET.SubElement(field, "TypeDefinitionReference", name=name, nested="false")
+
+    return field
+
+
 def test_add_parameters(ced):
     process = ced.new_process("Test.TestProcessParameter")
     process.add_field(cedobject_factory.make_field("String", "street"))
