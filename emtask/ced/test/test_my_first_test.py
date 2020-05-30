@@ -1,14 +1,9 @@
-import os
-from pathlib import Path
-
 import lxml.etree as ET
 import pytest
 
-from emtask import project
 from emtask.ced import cedobject_factory
 from emtask.ced.nubia_commands.commands import rewire_verb
 from emtask.ced.tool import CED
-from emtask.project import EMProject
 from emtasktest.testutils import sample_project
 
 
@@ -175,31 +170,37 @@ def test_when_creating_new_process_save_and_reopen_they_match(ced):
 def test_create_process_wrapper(ced):
     process_path = "PRJContact.Implementation.Contact.InlineContact"
     process = ced.new_process(process_path)
-    process.add_field("String", "name1")
+    process.add_field(of.make_field("String", "name1"))
     process.mark_as_parameter("name1")
     wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
 
     assert wrapper_path == wrapper_process.path
-    expected = wrapper_process.get_parameters()[0]
-    actual = process.get_parameters()[0]
-    assert_equal_node(expected, actual)
-    assert wrapper_process.get_results() == wrapper_process.get_results()
+    wrapper_params = wrapper_process.get_parameters()
+    process_params = wrapper_process.get_parameters()
+    assert len(wrapper_params) == len(process_params)
+
+    for i in range(len(wrapper_params)):
+        assert_equal_node(process_params[i], wrapper_params[i])
 
 
 def assert_equal_node(expected, actual):
     assert ET.tostring(expected) == ET.tostring(actual)
 
 
+of = cedobject_factory
+
+
 def test_add_all_basic_types_fields(ced):
     process = ced.new_process("Test.TestProcess")
-    process.add_field("String", "name1")
-    process.add_field("Number", "referenceNo")
-    process.add_field("Integer", "streetNumber")
-    process.add_field("Float", "partialAmount")
-    process.add_field("Decimal", "totalAmount")  # defaults to precision 42 and scale 1
-    process.add_field("Character", "oneLetter")
-    process.add_field("Date", "dob")
+    process.add_field(of.make_field("String", "name1"))
+    process.add_field(of.make_field("Number", "referenceNo"))
+    process.add_field(of.make_field("Integer", "streetNumber"))
+    process.add_field(of.make_field("Float", "partialAmount"))
+    # defaults to precision 42 and scale 1
+    process.add_field(of.make_field("Decimal", "totalAmount"))
+    process.add_field(of.make_field("Character", "oneLetter"))
+    process.add_field(of.make_field("Date", "dob"))
     assert process.get_field("name1") is not None
     assert process.get_field("referenceNo") is not None
     assert process.get_field("streetNumber") is not None
@@ -212,8 +213,8 @@ def test_add_all_basic_types_fields(ced):
 
 def test_add_parameters(ced):
     process = ced.new_process("Test.TestProcessParameter")
-    process.add_field("String", "street")
-    process.add_field("Number", "streetNumber")
+    process.add_field(cedobject_factory.make_field("String", "street"))
+    process.add_field(cedobject_factory.make_field("Number", "streetNumber"))
     process.mark_as_parameter("street")
     process.mark_as_parameter("streetNumber")
     assert process.get_field("street") is not None
@@ -224,8 +225,8 @@ def test_add_parameters(ced):
 
 def test_add_result(ced):
     process = ced.new_process("Test.TestProcessResult")
-    process.add_field("String", "street")
-    process.add_field("Number", "streetNumber")
+    process.add_field(cedobject_factory.make_field("String", "street"))
+    process.add_field(cedobject_factory.make_field("Number", "streetNumber"))
 
     process.mark_as_result("street")
     process.mark_as_result("streetNumber")

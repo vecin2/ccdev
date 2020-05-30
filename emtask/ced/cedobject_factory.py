@@ -1,7 +1,22 @@
 import os
+from copy import deepcopy
 from pathlib import Path
 
 import lxml.etree as ET
+
+
+def make_field(field_type, field_name):
+    field = ET.Element(
+        field_type + "Field",
+        designNodes="",
+        isAttribute="false",
+        length="0",
+        name=field_name,
+    )
+    locale = ET.SubElement(field, field_type + "Field", locale="")
+    ET.SubElement(locale, "Format")
+
+    return field
 
 
 def add_process_def_node(parent):
@@ -145,23 +160,13 @@ class Process(CEDResource):
         super().__init__(root, path, etree)
         self.procedures = []
 
-    def add_field(self, field_type, name):
+    def add_field(self, field_node):
         process_def = self.rootnode.find("ProcessDefinition")
         instance_fields = process_def.find("InstanceFields")
 
         if not instance_fields:
             instance_fields = ET.SubElement(process_def, "InstanceFields")
-        string_field = ET.SubElement(
-            instance_fields,
-            field_type + "Field",
-            designNodes="",
-            isAttribute="false",
-            length="0",
-            name=name,
-        )
-        locale = ET.SubElement(string_field, "StringField_loc", locale="")
-
-        ET.SubElement(locale, "Format")
+        instance_fields.append(field_node)
 
     def mark_as_parameter(self, field_name):
         self._mark_field(field_name, "Parameter")
@@ -175,7 +180,17 @@ class Process(CEDResource):
         ET.SubElement(process_def, tagname, attrib)
 
     def get_parameters(self):
-        return self._get_params_or_results("Parameter")
+        param_nodes = self._get_params_or_results("Parameter")
+        parameter_names = [param.get("name") for param in param_nodes]
+        process_def = self.rootnode.find("ProcessDefinition")
+        instance_fields = process_def.find("InstanceFields")
+        fields = []
+
+        for field in instance_fields.find("."):
+            if field.get("name") in parameter_names:
+                fields.append(field)
+
+        return fields
 
     def get_results(self):
         return self._get_params_or_results("Result")
@@ -224,7 +239,7 @@ class Process(CEDResource):
         process = make_process(self.root, path)
 
         for param in self.get_parameters():
-            process.add_field("String", param.get("name"))
+            process.add_field(deepcopy(param))
             process.mark_as_parameter(param.get("name"))
 
         return process
