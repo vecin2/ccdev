@@ -160,11 +160,23 @@ class Process(CEDResource):
         super().__init__(root, path, etree)
         self.procedures = []
 
+    @property
+    def instance_fields(self):
+        return self.process_def.find("InstanceFields")
+
+    @property
+    def process_def(self):
+        return self.rootnode.find("ProcessDefinition")
+
     def add_import(self, import_elem):
         self.rootnode.append(import_elem)
 
     def get_imports(self):
         return self.rootnode.findall("ImportDeclaration")
+
+    def add_fields(self, fields):
+        for field in fields:
+            self.add_field(field)
 
     def add_field(self, field_node):
         process_def = self.rootnode.find("ProcessDefinition")
@@ -173,6 +185,18 @@ class Process(CEDResource):
         if not instance_fields:
             instance_fields = ET.SubElement(process_def, "InstanceFields")
         instance_fields.append(field_node)
+
+    def add_parameters(self, parameters):
+        self.add_fields(parameters)
+        self._mark_as_params_or_results(parameters, "Parameter")
+
+    def _mark_as_params_or_results(self, parameters, tagname):
+        for param in parameters:
+            self._mark_field(param.get("name"), tagname)
+
+    def add_results(self, results):
+        self.add_fields(results)
+        self._mark_as_params_or_results(results, "Result")
 
     def mark_as_parameter(self, field_name):
         self._mark_field(field_name, "Parameter")
@@ -186,25 +210,20 @@ class Process(CEDResource):
         ET.SubElement(process_def, tagname, attrib)
 
     def get_parameters(self):
-        param_nodes = self._get_params_or_results("Parameter")
-        parameter_names = [param.get("name") for param in param_nodes]
-        process_def = self.rootnode.find("ProcessDefinition")
-        instance_fields = process_def.find("InstanceFields")
-        fields = []
-
-        for field in instance_fields.find("."):
-            if field.get("name") in parameter_names:
-                fields.append(field)
-
-        return fields
+        return self._get_params_or_results("Parameter")
 
     def get_results(self):
         return self._get_params_or_results("Result")
 
     def _get_params_or_results(self, tagname):
-        process_def = self.rootnode.find("ProcessDefinition")
+        return [
+            field
+            for field in self.instance_fields.find(".")
+            if field.get("name") in self._get_process_def_child_names(tagname)
+        ]
 
-        return process_def.findall(tagname)
+    def _get_process_def_child_names(self, tagname):
+        return [elem.get("name") for elem in self.process_def.findall(tagname)]
 
     def get_field(self, name):
         for node in self.rootnode.iter():
@@ -243,10 +262,8 @@ class Process(CEDResource):
 
     def wrapper(self, path):
         process = make_process(self.root, path)
-
-        for param in self.get_parameters():
-            process.add_field(deepcopy(param))
-            process.mark_as_parameter(param.get("name"))
+        process.add_parameters(deepcopy(self.get_parameters()))
+        process.add_results(deepcopy(self.get_results()))
 
         return process
 

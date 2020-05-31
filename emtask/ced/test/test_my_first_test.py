@@ -167,24 +167,55 @@ def test_when_creating_new_process_save_and_reopen_they_match(ced):
     assert_file_matches_process(ced, process_path, process)
 
 
-def test_create_process_wrapper(ced):
+def test_process_wrapper_with_process_has_basic_params_and_results(ced):
     process_path = "PRJContact.Implementation.Contact.InlineContact"
     process = ced.new_process(process_path)
     process.add_field(of.make_field("String", "name1"))
     process.mark_as_parameter("name1")
+    process.add_field(of.make_field("Integer", "age"))
+    process.mark_as_parameter("age")
+    process.add_field(of.make_field("Integer", "output"))
+    process.mark_as_result("output")
     wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
 
     assert wrapper_path == wrapper_process.path
-    wrapper_params = wrapper_process.get_parameters()
-    process_params = wrapper_process.get_parameters()
+    assert_equal_elems(wrapper_process.get_parameters(), process.get_parameters())
+    assert_equal_elems(wrapper_process.get_results(), process.get_results())
+
+
+@pytest.mark.skip
+def test_process_wrapper_when_process_has_object_params_imports_object(ced):
+    process = ced.new_process("PRJContact.Implementation.Contact.ViewContact")
+    imported_process = ced.new_process(
+        "PRJContact.Implementation.Contact.Processes.InlineView"
+    )
+    process.add_import
+    process.add_field(of.make_field("String", "name1"))
+    process.mark_as_parameter("name1")
+    process.add_field(of.make_field("Integer", "age"))
+    process.mark_as_parameter("age")
+    process.add_field(of.make_field("Integer", "output"))
+    process.mark_as_result("output")
+    wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
+    wrapper_process = process.wrapper(wrapper_path)
+
+    assert wrapper_path == wrapper_process.path
+    assert_equal_elems(wrapper_process.get_parameters(), process.get_parameters())
+    assert_equal_elems(wrapper_process.get_results(), process.get_results())
+
+    def test_add_import(ced):
+        """"""
+
+
+def assert_equal_elems(wrapper_params, process_params):
     assert len(wrapper_params) == len(process_params)
 
     for i in range(len(wrapper_params)):
-        assert_equal_node(process_params[i], wrapper_params[i])
+        assert_equal_elem(process_params[i], wrapper_params[i])
 
 
-def assert_equal_node(expected, actual):
+def assert_equal_elem(expected, actual):
     assert ET.tostring(expected) == ET.tostring(actual)
 
 
@@ -211,31 +242,18 @@ def test_add_all_basic_types_fields(ced):
     # todo type Form
 
 
-# <ObjectField
-#    designNotes=""
-#    isAggregate="false"
-#    isAttribute="false"
-#    name="aProcess">
-#  <ObjectField_loc
-#      locale="">
-#    <Format />
-#  </ObjectField_loc>
-#  <TypeDefinitionReference
-#      name="AProcess2"
-#      nested="false" />
-# </ObjectField>
 def test_add_object_field(ced):
     childprocess = ced.new_process("Test.TestChildProcess")
     process = ced.new_process("Test.TestMainProcess")
-    field = make_object_field("TestChildProcess")
+    field = make_object_field("TestChildProcess", "childProcess")
     process.add_field(field)
     returned_field = process.get_field("childProcess")
-    assert_equal_node(returned_field, field)
+    assert_equal_elem(returned_field, field)
 
 
-def make_object_field(name):
-    field = of.make_field("Object", "childProcess")
-    ET.SubElement(field, "TypeDefinitionReference", name=name, nested="false")
+def make_object_field(object_type, name):
+    field = of.make_field("Object", name)
+    ET.SubElement(field, "TypeDefinitionReference", name=object_type, nested="false")
 
     return field
 
