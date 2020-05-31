@@ -184,28 +184,39 @@ def test_process_wrapper_with_process_has_basic_params_and_results(ced):
     assert_equal_elems(wrapper_process.get_results(), process.get_results())
 
 
-@pytest.mark.skip
 def test_process_wrapper_when_process_has_object_params_imports_object(ced):
-    process = ced.new_process("PRJContact.Implementation.Contact.ViewContact")
+    process = ced.new_process("PRJContact.Implementation.Contact.Verbs.ViewContact")
     imported_process = ced.new_process(
         "PRJContact.Implementation.Contact.Processes.InlineView"
     )
-    process.add_import
-    process.add_field(of.make_field("String", "name1"))
-    process.mark_as_parameter("name1")
-    process.add_field(of.make_field("Integer", "age"))
-    process.mark_as_parameter("age")
-    process.add_field(of.make_field("Integer", "output"))
-    process.mark_as_result("output")
-    wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
+    inlineview_import = of.make_import(imported_process.path)
+    process.add_import(inlineview_import)
+    inlineview_field = make_object_field("InlineView", "inlineView")
+    process.add_field(inlineview_field)
+    process.mark_as_parameter("inlineView")
+    wrapper_path = "PRJContact.Implementation.Contact.Verbs.ViewContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
+    process.save()
+    imported_process.save()
+    wrapper_process.save()
 
-    assert wrapper_path == wrapper_process.path
-    assert_equal_elems(wrapper_process.get_parameters(), process.get_parameters())
-    assert_equal_elems(wrapper_process.get_results(), process.get_results())
+    assert_equal_elem(inlineview_field, wrapper_process.get_parameters()[0])
+    assert_equal_elem(inlineview_import, wrapper_process.get_imports()[0])
 
-    def test_add_import(ced):
-        """"""
+
+def test_add_import(ced):
+    mainprocess = ced.new_process("Test.MainProcess")
+    childprocess = ced.new_process("Test.Processes.ChildProcess")
+
+    mainprocess.add_import(cedobject_factory.make_import(childprocess.path))
+
+    import_elem = mainprocess.rootnode.findall("ImportDeclaration")[0]
+    packagename_elems = import_elem.find("PackageSpecifier").findall("PackageName")
+    assert "ChildProcess" == import_elem.get("name")
+    assert "Test" == packagename_elems[0].get("name")
+    assert "Processes" == packagename_elems[1].get("name")
+    package_entry_ref = import_elem.find("PackageEntryReference")
+    assert "ChildProcess" == package_entry_ref.get("name")
 
 
 def assert_equal_elems(wrapper_params, process_params):

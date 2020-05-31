@@ -5,6 +5,18 @@ from pathlib import Path
 import lxml.etree as ET
 
 
+def make_import(childprocess_path):
+    packagenames = childprocess_path.split(".")
+    import_elem = ET.Element("ImportDeclaration", name=packagenames[-1])
+    pkg_spec = ET.SubElement(import_elem, "PackageSpecifier", name="")
+
+    for packagename in packagenames[:-1]:
+        ET.SubElement(pkg_spec, "PackageName", name=packagename)
+    ET.SubElement(import_elem, "PackageEntryReference", name=packagenames[-1])
+
+    return import_elem
+
+
 def make_field(field_type, field_name):
     field = ET.Element(
         field_type + "Field",
@@ -19,7 +31,7 @@ def make_field(field_type, field_name):
     return field
 
 
-def add_process_def_node(parent):
+def add_process_def_node(parent, name):
     attribs = {
         "appearsInHistory": "true",
         "cyclic": "false",
@@ -28,7 +40,7 @@ def add_process_def_node(parent):
         "icon": "",
         "isPrivate": "false",
         "logicalDatabaseConnection": "",
-        "name": "EmptyProcess",
+        "name": name,
         "nested": "false",
         "pointOfNoReturn": "false",
         "transactionBehaviour": "TX_NOT_SUPPORTED",
@@ -39,9 +51,9 @@ def add_process_def_node(parent):
     return ET.SubElement(parent, "ProcessDefinition", attribs)
 
 
-def new_process_etree():
+def new_process_etree(name):
     root = ET.Element("PackageEntry")
-    process_def = add_process_def_node(root)
+    process_def = add_process_def_node(root, name)
     ET.SubElement(process_def, "StartNode", displayName="", name="", x="16", y="32")
     ET.SubElement(process_def, "EndNode", displayName="", name="", x="240", y="32")
     transition = ET.SubElement(process_def, "Transition", isExceptionTransition="false")
@@ -82,7 +94,9 @@ def new_procedure_etree(name):
 
 
 def make_process(root, path):
-    return Process(root, path, ET.ElementTree(new_process_etree()))
+    process_name = path.split(".")[-1]
+
+    return Process(root, path, ET.ElementTree(new_process_etree(process_name)))
 
 
 def make_procedure(root, path):
@@ -261,11 +275,33 @@ class Process(CEDResource):
         return None
 
     def wrapper(self, path):
-        process = make_process(self.root, path)
-        process.add_parameters(deepcopy(self.get_parameters()))
-        process.add_results(deepcopy(self.get_results()))
+        wrapper = make_process(self.root, path)
+        wrapper.add_parameters(deepcopy(self.get_parameters()))
+        wrapper.add_results(deepcopy(self.get_results()))
+        data_flow = self.get_parameters()
+        data_flow.extend(self.get_results())
+        dataflow_objectfields = [field for field in data_flow if field.tag == "ObjectField"]
 
-        return process
+        imports = [
+            self.get_object_import(object_field) for object_field in dataflow_objectfields
+        ]
+
+        wrapper.add_imports(deepcopy(imports))
+
+        return wrapper
+
+    def add_imports(self, imports):
+        for import_elem in imports:
+            self.add_import(import_elem)
+
+    def get_object_import(self, object_field):
+        object_ref = object_field.find("TypeDefinitionReference").get("name")
+
+        for import_elem in self.get_imports():
+            if object_ref == import_elem.get("name"):
+                return import_elem
+
+        return None
 
     def save(self):
         super().save()
