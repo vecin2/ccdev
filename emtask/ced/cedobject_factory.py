@@ -274,21 +274,53 @@ class Process(CEDResource):
 
         return None
 
+    # <ChildProcess
+    #    displayName=""
+    #    executeAsAsynchronous="false"
+    #    name="viewContact"
+    #    waitOnParent="false"
+    #    x="154"
+    #    y="32">
+    #  <ProcessDefinitionReference
+    #      name="ViewContact"
+    #      nested="false" />
+    # </ChildProcess>
     def wrapper(self, path):
         wrapper = make_process(self.root, path)
         wrapper.add_parameters(deepcopy(self.get_parameters()))
         wrapper.add_results(deepcopy(self.get_results()))
-        data_flow = self.get_parameters()
-        data_flow.extend(self.get_results())
-        dataflow_objectfields = [field for field in data_flow if field.tag == "ObjectField"]
-
-        imports = [
-            self.get_object_import(object_field) for object_field in dataflow_objectfields
-        ]
-
-        wrapper.add_imports(deepcopy(imports))
+        wrapper.add_imports(deepcopy(self.get_object_imports()))
+        childprocess = ET.SubElement(
+            wrapper.process_def,
+            "ChildProcess",
+            displayName="",
+            executeAsAsynchronous="false",
+            name="ViewContact",
+            x="154",
+            y="32",
+        )
+        ET.SubElement(
+            childprocess,
+            "ProcessDefinitionReference",
+            name="ViewContact",
+            nested="false",
+        )
 
         return wrapper
+
+    def get_object_imports(self):
+        data_flow = self.get_parameters()
+        data_flow.extend(self.get_results())
+        dataflow_objectfields = [
+            field for field in data_flow if field.tag == "ObjectField"
+        ]
+
+        imports = [
+            self.get_object_import(object_field)
+            for object_field in dataflow_objectfields
+        ]
+
+        return imports
 
     def add_imports(self, imports):
         for import_elem in imports:
