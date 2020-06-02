@@ -220,14 +220,32 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     assert "fieldStore0" == fieldstores[0].get("name")
     dataflows = wrapper_process.process_def.findall("DataFlow")
     assert 2 == len(dataflows)
-    assert "fieldStore0" == dataflows[0].find("FromNode").get("name")
-    assert "viewContact" == dataflows[0].find("ToNode").get("name")
-    dataflowentries = dataflows[0].findall("DataFlowEntry")
+    assert_dataflow(
+        dataflows[0],
+        fromnode="fieldStore0",
+        tonode="viewContact",
+        fromfield="inlineView",
+        tofield="inlineView",
+    )
+    assert_dataflow(
+        dataflows[1],
+        fromnode="viewContact",
+        tonode="fieldStore0",
+        fromfield="output",
+        tofield="output",
+    )
+
+
+def assert_dataflow(dataflow, fromnode=None, tonode=None, fromfield=None, tofield=None):
+    assert fromnode == dataflow.find("FromNode").get("name")
+    assert tonode == dataflow.find("ToNode").get("name")
+    dataflowentries = dataflow.findall("DataFlowEntry")
     assert 1 == len(dataflowentries)
     param_assignment = dataflowentries[0].find("FromField").find("ParameterAssignment")
     assert param_assignment is not None
-
-    assert "inlineView" == param_assignment.find("Verbatim").text
+    assert fromfield == param_assignment.find("Verbatim").text
+    field_ref = dataflowentries[0].find("ToField").find("FieldDefinitionReference")
+    assert tofield == field_ref.get("name")
 
 
 def test_add_import(ced):

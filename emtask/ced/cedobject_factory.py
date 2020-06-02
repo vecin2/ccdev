@@ -158,7 +158,7 @@ def make_fieldstore(name):
     return ET.Element("ThisNode", displayName="", name=name, x="144", y="176")
 
 
-def make_dataflow(fromnode, tonode, from_data=None, to_data=None):
+def make_dataflow(process_def, fromnode, tonode, from_data=None, to_data=None):
     dataflow = ET.Element("DataFlow")
     ET.SubElement(dataflow, "FromNode", name=fromnode)
     ET.SubElement(dataflow, "ToNode", name=tonode)
@@ -399,6 +399,7 @@ class Process(CEDResource):
         )
         wrapper.process_def.append(make_fieldstore("fieldStore0"))
         input_flow = make_dataflow(
+            self.process_def,
             "fieldStore0",
             self.instance_name(),
             from_data="inlineView",
@@ -407,6 +408,7 @@ class Process(CEDResource):
         wrapper.process_def.append(input_flow)
         wrapper.process_def.append(
             make_dataflow(
+                self.process_def,
                 self.instance_name(),
                 "fieldStore0",
                 from_data="output",
