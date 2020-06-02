@@ -203,6 +203,23 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     assert_equal_elem(inlineview_field, wrapper_process.get_parameters()[0])
     assert_equal_elem(inlineview_import, wrapper_process.get_imports()[0])
 
+    assert "viewContact" == wrapper_process.process_def.findall("ChildProcess")[0].get(
+        "name"
+    )
+    transitions = wrapper_process.process_def.findall("Transition")
+    assert 2 == len(transitions)
+    assert transitions[0].find("StartNodeReference") is not None
+    assert "viewContact" == transitions[0].find("ToNode").get("name")
+    assert transitions[1].find("EndNodeReference") is not None
+    assert "viewContact" == transitions[1].find("FromNode").get("name")
+    fieldstores = wrapper_process.process_def.findall("ThisNode")
+    assert 1 == len(fieldstores)
+    assert "fieldStore0" == fieldstores[0].get("name")
+    dataflows = wrapper_process.process_def.findall("DataFlow")
+    assert 1 == len(dataflows)
+    assert "fieldStore0" == dataflows[0].find("FromNode").get("name")
+    assert "viewContact" == dataflows[0].find("ToNode").get("name")
+
 
 def test_add_import(ced):
     mainprocess = ced.new_process("Test.MainProcess")

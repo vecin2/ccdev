@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import lxml.etree as ET
+from lxml.etree import CDATA
 
 
 def make_import(childprocess_path):
@@ -56,20 +57,20 @@ def new_process_etree(name):
     process_def = add_process_def_node(root, name)
     ET.SubElement(process_def, "StartNode", displayName="", name="", x="16", y="32")
     ET.SubElement(process_def, "EndNode", displayName="", name="", x="240", y="32")
-    transition = ET.SubElement(process_def, "Transition", isExceptionTransition="false")
-    ET.SubElement(transition, "StartNodeReference", name="")
-    ET.SubElement(transition, "EndNodeReference", name="")
-    graph_node_list = ET.SubElement(transition, "GraphNodeList", name="")
-    ET.SubElement(
-        graph_node_list,
-        "GraphNode",
-        icon="",
-        isLabelHolder="true",
-        label="",
-        name="",
-        x="128",
-        y="32",
-    )
+    # transition = ET.SubElement(process_def, "Transition", isExceptionTransition="false")
+    # ET.SubElement(transition, "StartNodeReference", name="")
+    # ET.SubElement(transition, "EndNodeReference", name="")
+    # graph_node_list = ET.SubElement(transition, "GraphNodeList", name="")
+    # ET.SubElement(
+    #    graph_node_list,
+    #    "GraphNode",
+    #    icon="",
+    #    isLabelHolder="true",
+    #    label="",
+    #    name="",
+    #    x="128",
+    #    y="32",
+    # )
     ET.SubElement(process_def, "BuilderInfo", name="")
     ET.SubElement(process_def, "TopicScope", defineTopicScope="false", name="")
 
@@ -97,6 +98,97 @@ def make_process(root, path):
     process_name = path.split(".")[-1]
 
     return Process(root, path, ET.ElementTree(new_process_etree(process_name)))
+
+
+def make_childprocess(process):
+    childprocess = ET.Element(
+        "ChildProcess",
+        displayName="",
+        executeAsAsynchronous="false",
+        name=process.instance_name(),
+        x="142",
+        y="32",
+    )
+    ET.SubElement(
+        childprocess, "ProcessDefinitionReference", name=process.name(), nested="false",
+    )
+
+    return childprocess
+
+
+def make_start_transition(childprocess_name):
+    transition = ET.Element("Transition", isExceptionTransition="false")
+    ET.SubElement(transition, "StartNodeReference", name="")
+    ET.SubElement(transition, "ToNode", name=childprocess_name)
+    graph_node_list = ET.SubElement(transition, "GraphNodeList", name="")
+    ET.SubElement(
+        graph_node_list,
+        "GraphNode",
+        icon="",
+        isLabelHolder="true",
+        label="",
+        name="",
+        x="70",
+        y="32",
+    )
+
+    return transition
+
+
+def make_end_transition(childprocess_name):
+    transition = ET.Element("Transition", isExceptionTransition="false")
+    ET.SubElement(transition, "FromNode", name=childprocess_name)
+    ET.SubElement(transition, "EndNodeReference", name="")
+    graph_node_list = ET.SubElement(transition, "GraphNodeList", name="")
+    ET.SubElement(
+        graph_node_list,
+        "GraphNode",
+        icon="",
+        isLabelHolder="true",
+        label="",
+        name="",
+        x="202",
+        y="32",
+    )
+
+    return transition
+
+
+def make_fieldstore(name):
+    return ET.Element("ThisNode", displayName="", name=name, x="144", y="176")
+
+
+def make_dataflow(fromnode, tonode):
+    dataflow = ET.Element("DataFlow")
+    ET.SubElement(dataflow, "FromNode", name=fromnode)
+    ET.SubElement(dataflow, "ToNode", name=tonode)
+    dataflow_entry = ET.SubElement(dataflow, "DataFlowEntry")
+    from_field = ET.SubElement(dataflow_entry, "FromField")
+    param_assignment = ET.SubElement(
+        from_field,
+        "ParameterAssignment",
+        exceptionStrategy="0",
+        language="EcmaScript",
+        name="",
+        version="",
+    )
+    verbatim = ET.SubElement(param_assignment, "Verbatim", fieldName="text")
+    verbatim.text = CDATA("inlineview")
+    to_field = ET.SubElement(dataflow_entry, "ToField")
+    ET.SubElement(to_field, "FieldDefinitionReference", name="inlineView")
+    graph_node_list = ET.SubElement(dataflow, "GraphNodeList", name="")
+    ET.SubElement(
+        graph_node_list,
+        "GraphNode",
+        icon="",
+        isLabelHolder="true",
+        label="",
+        name="",
+        x="144",
+        y="96",
+    )
+
+    return dataflow
 
 
 def make_procedure(root, path):
@@ -285,26 +377,28 @@ class Process(CEDResource):
     #      name="ViewContact"
     #      nested="false" />
     # </ChildProcess>
+    def name(self):
+        return self.process_def.get("name")
+
+    def instance_name(self):
+        name = self.name()
+
+        return name[0].lower() + name[1:]
+
     def wrapper(self, path):
         wrapper = make_process(self.root, path)
         wrapper.add_parameters(deepcopy(self.get_parameters()))
         wrapper.add_results(deepcopy(self.get_results()))
         wrapper.add_imports(deepcopy(self.get_object_imports()))
-        childprocess = ET.SubElement(
-            wrapper.process_def,
-            "ChildProcess",
-            displayName="",
-            executeAsAsynchronous="false",
-            name="ViewContact",
-            x="154",
-            y="32",
+        wrapper.process_def.append(make_childprocess(self))
+        wrapper.process_def.append(
+            make_start_transition(make_childprocess(self).get("name"))
         )
-        ET.SubElement(
-            childprocess,
-            "ProcessDefinitionReference",
-            name="ViewContact",
-            nested="false",
+        wrapper.process_def.append(
+            make_end_transition(make_childprocess(self).get("name"))
         )
+        wrapper.process_def.append(make_fieldstore("fieldStore0"))
+        wrapper.process_def.append(make_dataflow("fieldStore0", self.instance_name()))
 
         return wrapper
 
