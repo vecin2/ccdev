@@ -173,7 +173,7 @@ def make_dataflow(fromnode, tonode):
         version="",
     )
     verbatim = ET.SubElement(param_assignment, "Verbatim", fieldName="text")
-    verbatim.text = CDATA("inlineview")
+    verbatim.text = CDATA("inlineView")
     to_field = ET.SubElement(dataflow_entry, "ToField")
     ET.SubElement(to_field, "FieldDefinitionReference", name="inlineView")
     graph_node_list = ET.SubElement(dataflow, "GraphNodeList", name="")

@@ -1,5 +1,6 @@
 import lxml.etree as ET
 import pytest
+from lxml.etree import CDATA
 
 from emtask.ced import cedobject_factory
 from emtask.ced.nubia_commands.commands import rewire_verb
@@ -219,6 +220,12 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     assert 1 == len(dataflows)
     assert "fieldStore0" == dataflows[0].find("FromNode").get("name")
     assert "viewContact" == dataflows[0].find("ToNode").get("name")
+    dataflowentries = dataflows[0].findall("DataFlowEntry")
+    assert 1 == len(dataflowentries)
+    param_assignment = dataflowentries[0].find("FromField").find("ParameterAssignment")
+    assert param_assignment is not None
+
+    assert "inlineView" == param_assignment.find("Verbatim").text
 
 
 def test_add_import(ced):
