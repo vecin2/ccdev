@@ -195,6 +195,8 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     inlineview_field = make_object_field("InlineView", "inlineView")
     process.add_field(inlineview_field)
     process.mark_as_parameter("inlineView")
+    process.add_field(of.make_field("Integer", "output"))
+    process.mark_as_result("output")
     wrapper_path = "PRJContact.Implementation.Contact.Verbs.ViewContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
     process.save()
@@ -217,7 +219,7 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     assert 1 == len(fieldstores)
     assert "fieldStore0" == fieldstores[0].get("name")
     dataflows = wrapper_process.process_def.findall("DataFlow")
-    assert 1 == len(dataflows)
+    assert 2 == len(dataflows)
     assert "fieldStore0" == dataflows[0].find("FromNode").get("name")
     assert "viewContact" == dataflows[0].find("ToNode").get("name")
     dataflowentries = dataflows[0].findall("DataFlowEntry")

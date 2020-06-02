@@ -158,7 +158,7 @@ def make_fieldstore(name):
     return ET.Element("ThisNode", displayName="", name=name, x="144", y="176")
 
 
-def make_dataflow(fromnode, tonode):
+def make_dataflow(fromnode, tonode, from_data=None, to_data=None):
     dataflow = ET.Element("DataFlow")
     ET.SubElement(dataflow, "FromNode", name=fromnode)
     ET.SubElement(dataflow, "ToNode", name=tonode)
@@ -173,9 +173,9 @@ def make_dataflow(fromnode, tonode):
         version="",
     )
     verbatim = ET.SubElement(param_assignment, "Verbatim", fieldName="text")
-    verbatim.text = CDATA("inlineView")
+    verbatim.text = CDATA(from_data)
     to_field = ET.SubElement(dataflow_entry, "ToField")
-    ET.SubElement(to_field, "FieldDefinitionReference", name="inlineView")
+    ET.SubElement(to_field, "FieldDefinitionReference", name=to_data)
     graph_node_list = ET.SubElement(dataflow, "GraphNodeList", name="")
     ET.SubElement(
         graph_node_list,
@@ -398,7 +398,21 @@ class Process(CEDResource):
             make_end_transition(make_childprocess(self).get("name"))
         )
         wrapper.process_def.append(make_fieldstore("fieldStore0"))
-        wrapper.process_def.append(make_dataflow("fieldStore0", self.instance_name()))
+        input_flow = make_dataflow(
+            "fieldStore0",
+            self.instance_name(),
+            from_data="inlineView",
+            to_data="inlineView",
+        )
+        wrapper.process_def.append(input_flow)
+        wrapper.process_def.append(
+            make_dataflow(
+                self.instance_name(),
+                "fieldStore0",
+                from_data="output",
+                to_data="output",
+            )
+        )
 
         return wrapper
 
