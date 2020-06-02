@@ -185,6 +185,41 @@ def test_process_wrapper_with_process_has_basic_params_and_results(ced):
     assert_equal_elems(wrapper_process.get_results(), process.get_results())
 
 
+class ProcessAssertor(object):
+    def __init__(self, process):
+        self.process = process
+        self.rootelem = process.rootnode
+
+    def assert_params(self, expected_fields):
+        assert_equal_elems(expected_fields, self.process.get_parameters())
+
+    def assert_results(self, expected_fields):
+        assert_equal_elems(expected_fields, self.process.get_results())
+
+    def assert_imports(self, expected_imports):
+        assert_equal_elems(expected_imports, self.process.get_imports())
+
+    def assert_process_in_graph(self, process_ref, node_name):
+        childprocesses = self.process.process_def.findall("ChildProcess")
+
+        for childprocess in childprocesses:
+            process_ref_elem = childprocess.find("ProcessDefinitionReference")
+
+            if (
+                childprocess.get("name") == node_name
+                and process_ref_elem.get("name") == process_ref
+            ):
+                assert True
+
+                return
+        assert False, (
+            "Not found a process node in graph with named "
+            + node_name
+            + " referencing "
+            + process_ref
+        )
+
+
 def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     process = ced.new_process("PRJContact.Implementation.Contact.Verbs.ViewContact")
     imported_process = ced.new_process(
@@ -195,7 +230,11 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     inlineview_field = make_object_field("InlineView", "inlineView")
     process.add_field(inlineview_field)
     process.mark_as_parameter("inlineView")
-    process.add_field(of.make_field("Integer", "output"))
+    process.mark_as_parameter("inlineView")
+    # process.add_field(of.make_field("String", "street"))
+    # process.mark_as_parameter("address")
+    output_field = of.make_field("Integer", "output")
+    process.add_field(output_field)
     process.mark_as_result("output")
     wrapper_path = "PRJContact.Implementation.Contact.Verbs.ViewContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
@@ -203,12 +242,14 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     imported_process.save()
     wrapper_process.save()
 
-    assert_equal_elem(inlineview_field, wrapper_process.get_parameters()[0])
-    assert_equal_elem(inlineview_import, wrapper_process.get_imports()[0])
+    assert 1 == len(wrapper_process.get_parameters())
+    # check wrapper has field inlineView as parameter and imports the neccesary
+    wrapper_assertor = ProcessAssertor(wrapper_process)
+    wrapper_assertor.assert_params([inlineview_field])
+    wrapper_assertor.assert_results([output_field])
+    wrapper_assertor.assert_imports([inlineview_import])
+    wrapper_assertor.assert_process_in_graph("ViewContact", "viewContact")
 
-    assert "viewContact" == wrapper_process.process_def.findall("ChildProcess")[0].get(
-        "name"
-    )
     transitions = wrapper_process.process_def.findall("Transition")
     assert 2 == len(transitions)
     assert transitions[0].find("StartNodeReference") is not None
