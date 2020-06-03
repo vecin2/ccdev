@@ -100,23 +100,27 @@ def make_process(root, path):
     return Process(root, path, ET.ElementTree(new_process_etree(process_name)))
 
 
-def make_childprocess(process):
+def make_childprocess(process_ref_name, coordinates):
+    instance_name = process_ref_name[0].lower() + process_ref_name[1:]
     childprocess = ET.Element(
         "ChildProcess",
         displayName="",
         executeAsAsynchronous="false",
-        name=process.instance_name(),
-        x="142",
-        y="32",
+        name=instance_name,
+        x=coordinates[0],
+        y=coordinates[1],
     )
     ET.SubElement(
-        childprocess, "ProcessDefinitionReference", name=process.name(), nested="false",
+        childprocess,
+        "ProcessDefinitionReference",
+        name=process_ref_name,
+        nested="false",
     )
 
     return childprocess
 
 
-def make_start_transition(childprocess_name):
+def make_start_transition(childprocess_name, coordinates):
     transition = ET.Element("Transition", isExceptionTransition="false")
     ET.SubElement(transition, "StartNodeReference", name="")
     ET.SubElement(transition, "ToNode", name=childprocess_name)
@@ -128,14 +132,14 @@ def make_start_transition(childprocess_name):
         isLabelHolder="true",
         label="",
         name="",
-        x="70",
-        y="32",
+        x=coordinates[0],
+        y=coordinates[1],
     )
 
     return transition
 
 
-def make_end_transition(childprocess_name):
+def make_end_transition(childprocess_name, coordinates):
     transition = ET.Element("Transition", isExceptionTransition="false")
     ET.SubElement(transition, "FromNode", name=childprocess_name)
     ET.SubElement(transition, "EndNodeReference", name="")
@@ -147,21 +151,39 @@ def make_end_transition(childprocess_name):
         isLabelHolder="true",
         label="",
         name="",
-        x="202",
-        y="32",
+        x=coordinates[0],
+        y=coordinates[1],
     )
 
     return transition
 
 
-def make_fieldstore(name):
-    return ET.Element("ThisNode", displayName="", name=name, x="144", y="176")
+def make_fieldstore(name, coordinates):
+    return ET.Element(
+        "ThisNode", displayName="", name=name, x=coordinates[0], y=coordinates[1]
+    )
 
 
-def make_dataflow(process_def, fromnode, tonode, from_data=None, to_data=None):
+def make_dataflow(fromnode, tonode, coordinates):
     dataflow = ET.Element("DataFlow")
     ET.SubElement(dataflow, "FromNode", name=fromnode)
     ET.SubElement(dataflow, "ToNode", name=tonode)
+    graph_node_list = ET.SubElement(dataflow, "GraphNodeList", name="")
+    ET.SubElement(
+        graph_node_list,
+        "GraphNode",
+        icon="",
+        isLabelHolder="true",
+        label="",
+        name="",
+        x=coordinates[0],
+        y=coordinates[1],
+    )
+
+    return dataflow
+
+
+def make_dataflow_entry(dataflow, fromnode, tonode, from_data=None, to_data=None):
     dataflow_entry = ET.SubElement(dataflow, "DataFlowEntry")
     from_field = ET.SubElement(dataflow_entry, "FromField")
     param_assignment = ET.SubElement(
@@ -176,17 +198,6 @@ def make_dataflow(process_def, fromnode, tonode, from_data=None, to_data=None):
     verbatim.text = CDATA(from_data)
     to_field = ET.SubElement(dataflow_entry, "ToField")
     ET.SubElement(to_field, "FieldDefinitionReference", name=to_data)
-    graph_node_list = ET.SubElement(dataflow, "GraphNodeList", name="")
-    ET.SubElement(
-        graph_node_list,
-        "GraphNode",
-        icon="",
-        isLabelHolder="true",
-        label="",
-        name="",
-        x="144",
-        y="96",
-    )
 
     return dataflow
 
@@ -387,36 +398,60 @@ class Process(CEDResource):
 
     def wrapper(self, path):
         wrapper = make_process(self.root, path)
-        wrapper.add_parameters(deepcopy(self.get_parameters()))
-        wrapper.add_results(deepcopy(self.get_results()))
         wrapper.add_imports(deepcopy(self.get_object_imports()))
-        wrapper.process_def.append(make_childprocess(self))
+        wrapper.add_fields(deepcopy(self.get_params_and_results()))
+
+        for field in self.get_parameters():
+            wrapper.mark_as_parameter(field.get("name"))
+
+        for field in self.get_results():
+            wrapper.mark_as_result(field.get("name"))
+
+        childprocess = make_childprocess(self.name(), ("142", "32"))
+        wrapper.process_def.append(childprocess)
         wrapper.process_def.append(
-            make_start_transition(make_childprocess(self).get("name"))
+            make_start_transition(childprocess.get("name"), ("70", "32"))
         )
         wrapper.process_def.append(
-            make_end_transition(make_childprocess(self).get("name"))
+            make_end_transition(childprocess.get("name"), ("202", "32"))
         )
-        wrapper.process_def.append(make_fieldstore("fieldStore0"))
-        input_flow = make_dataflow(
-            self.process_def,
-            "fieldStore0",
-            self.instance_name(),
-            from_data="inlineView",
-            to_data="inlineView",
-        )
-        wrapper.process_def.append(input_flow)
-        wrapper.process_def.append(
-            make_dataflow(
-                self.process_def,
+        wrapper.process_def.append(make_fieldstore("fieldStore0", ("142", "176")))
+        dataflow = make_dataflow("fieldStore0", self.instance_name(), ("48", "144"))
+        parameters = wrapper.get_parameters()
+        tonode = self.instance_name()
+        fromnode = "fieldStore0"
+
+        for param in parameters:
+            make_dataflow_entry(
+                dataflow,
+                fromnode,
+                tonode,
+                from_data=param.get("name"),
+                to_data=param.get("name"),
+            )
+        wrapper.process_def.append(dataflow)
+
+        dataflow = make_dataflow(self.instance_name(), "fieldStore0", ("240", "144"))
+
+        for result in wrapper.get_results():
+            make_dataflow_entry(
+                dataflow,
                 self.instance_name(),
                 "fieldStore0",
-                from_data="output",
-                to_data="output",
+                from_data=result.get("name"),
+                to_data=result.get("name"),
             )
-        )
+        wrapper.process_def.append(dataflow)
 
         return wrapper
+
+    def get_params_and_results(self):
+        wrapper_fields = list(self.get_parameters())
+        wrapper_fields.extend(
+            field for field in self.get_results() if field not in wrapper_fields
+        )
+
+        return wrapper_fields
 
     def get_object_imports(self):
         data_flow = self.get_parameters()

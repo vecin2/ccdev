@@ -230,23 +230,24 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     inlineview_field = make_object_field("InlineView", "inlineView")
     process.add_field(inlineview_field)
     process.mark_as_parameter("inlineView")
-    process.mark_as_parameter("inlineView")
-    # process.add_field(of.make_field("String", "street"))
-    # process.mark_as_parameter("address")
+    street_field = of.make_field("String", "street")
+    process.add_field(street_field)
+    process.mark_as_parameter("street")
+    process.mark_as_result("street")
     output_field = of.make_field("Integer", "output")
     process.add_field(output_field)
     process.mark_as_result("output")
     wrapper_path = "PRJContact.Implementation.Contact.Verbs.ViewContactWrapper"
     wrapper_process = process.wrapper(wrapper_path)
+
     process.save()
     imported_process.save()
     wrapper_process.save()
 
-    assert 1 == len(wrapper_process.get_parameters())
     # check wrapper has field inlineView as parameter and imports the neccesary
     wrapper_assertor = ProcessAssertor(wrapper_process)
-    wrapper_assertor.assert_params([inlineview_field])
-    wrapper_assertor.assert_results([output_field])
+    wrapper_assertor.assert_params([inlineview_field, street_field])
+    wrapper_assertor.assert_results([street_field, output_field])
     wrapper_assertor.assert_imports([inlineview_import])
     wrapper_assertor.assert_process_in_graph("ViewContact", "viewContact")
 
@@ -265,27 +266,27 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
         dataflows[0],
         fromnode="fieldStore0",
         tonode="viewContact",
-        fromfield="inlineView",
-        tofield="inlineView",
+        data_entries=[("inlineView", "inlineView"), ("address", "address")],
     )
     assert_dataflow(
         dataflows[1],
         fromnode="viewContact",
         tonode="fieldStore0",
-        fromfield="output",
-        tofield="output",
+        data_entries=[("street", "street"), ("output", "output")],
     )
 
 
-def assert_dataflow(dataflow, fromnode=None, tonode=None, fromfield=None, tofield=None):
+def assert_dataflow(dataflow, fromnode=None, tonode=None, data_entries=None):
     assert fromnode == dataflow.find("FromNode").get("name")
     assert tonode == dataflow.find("ToNode").get("name")
     dataflowentries = dataflow.findall("DataFlowEntry")
-    assert 1 == len(dataflowentries)
+    assert len(data_entries) == len(dataflowentries)
     param_assignment = dataflowentries[0].find("FromField").find("ParameterAssignment")
     assert param_assignment is not None
+    fromfield = data_entries[0][0]
     assert fromfield == param_assignment.find("Verbatim").text
     field_ref = dataflowentries[0].find("ToField").find("FieldDefinitionReference")
+    tofield = data_entries[0][1]
     assert tofield == field_ref.get("name")
 
 
@@ -378,6 +379,17 @@ def test_add_result(ced):
     assert "street" == process.get_results()[0].get("name")
     assert process.get_field("streetNumber") is not None
     assert "streetNumber" == process.get_results()[1].get("name")
+
+
+def test_add_as_param_and_result(ced):
+    process = ced.new_process("Test.TestProcessParamAndResult")
+    process.add_field(cedobject_factory.make_field("String", "street"))
+    process.mark_as_parameter("street")
+    process.mark_as_result("street")
+
+    assert process.get_field("street") is not None
+    assert "street" == process.get_parameters()[0].get("name")
+    assert "street" == process.get_results()[0].get("name")
 
 
 def test_add_procedure(ced):
