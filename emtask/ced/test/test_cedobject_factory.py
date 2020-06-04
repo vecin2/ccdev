@@ -1,42 +1,6 @@
 import lxml.etree as ET
-import pytest
-from lxml.etree import CDATA
 
-from emtask.ced import cedobject_factory
-from emtask.ced.tool import CED
-from emtasktest.testutils import sample_project
-
-
-@pytest.fixture
-def ced():
-    ced = CED(sample_project().get_repo())
-    yield ced
-
-
-def test_when_creating_new_process_save_and_reopen_they_match(ced):
-    process_path = "PRJContact.Implementation.Contact.InlineContact"
-    process = ced.new_process(process_path)
-    process.save()
-
-    assert ced.get_realpath(process_path).exists()
-    assert_file_matches_process(ced, process_path, process)
-
-
-def test_process_wrapper_with_process_has_basic_params_and_results(ced):
-    process_path = "PRJContact.Implementation.Contact.InlineContact"
-    process = ced.new_process(process_path)
-    process.add_field(of.make_field("String", "name1"))
-    process.mark_as_parameter("name1")
-    process.add_field(of.make_field("Integer", "age"))
-    process.mark_as_parameter("age")
-    process.add_field(of.make_field("Integer", "output"))
-    process.mark_as_result("output")
-    wrapper_path = "PRJContact.Implementation.Contact.InlineContactWrapper"
-    wrapper_process = process.wrapper(wrapper_path)
-
-    assert wrapper_path == wrapper_process.path
-    assert_equal_elems(wrapper_process.get_parameters(), process.get_parameters())
-    assert_equal_elems(wrapper_process.get_results(), process.get_results())
+from emtask.ced import cedobject_factory as of
 
 
 class ProcessAssertor(object):
@@ -74,6 +38,31 @@ class ProcessAssertor(object):
         )
 
 
+def assert_equal_elems(wrapper_params, process_params):
+    assert len(wrapper_params) == len(process_params)
+
+    for i in range(len(wrapper_params)):
+        assert_equal_elem(process_params[i], wrapper_params[i])
+
+
+def assert_equal_elem(expected, actual):
+    assert ET.tostring(expected) == ET.tostring(actual)
+
+
+def assert_dataflow(dataflow, fromnode=None, tonode=None, data_entries=None):
+    assert fromnode == dataflow.find("FromNode").get("name")
+    assert tonode == dataflow.find("ToNode").get("name")
+    dataflowentries = dataflow.findall("DataFlowEntry")
+    assert len(data_entries) == len(dataflowentries)
+    param_assignment = dataflowentries[0].find("FromField").find("ParameterAssignment")
+    assert param_assignment is not None
+    fromfield = data_entries[0][0]
+    assert fromfield == param_assignment.find("Verbatim").text
+    field_ref = dataflowentries[0].find("ToField").find("FieldDefinitionReference")
+    tofield = data_entries[0][1]
+    assert tofield == field_ref.get("name")
+
+
 def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     process = ced.new_process("PRJContact.Implementation.Contact.Verbs.ViewContact")
     imported_process = ced.new_process(
@@ -81,7 +70,7 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     )
     inlineview_import = of.make_import(imported_process.path)
     process.add_import(inlineview_import)
-    inlineview_field = make_object_field("InlineView", "inlineView")
+    inlineview_field = of.make_object_field("InlineView", "inlineView")
     process.add_field(inlineview_field)
     process.mark_as_parameter("inlineView")
     street_field = of.make_field("String", "street")
@@ -130,25 +119,11 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     )
 
 
-def assert_dataflow(dataflow, fromnode=None, tonode=None, data_entries=None):
-    assert fromnode == dataflow.find("FromNode").get("name")
-    assert tonode == dataflow.find("ToNode").get("name")
-    dataflowentries = dataflow.findall("DataFlowEntry")
-    assert len(data_entries) == len(dataflowentries)
-    param_assignment = dataflowentries[0].find("FromField").find("ParameterAssignment")
-    assert param_assignment is not None
-    fromfield = data_entries[0][0]
-    assert fromfield == param_assignment.find("Verbatim").text
-    field_ref = dataflowentries[0].find("ToField").find("FieldDefinitionReference")
-    tofield = data_entries[0][1]
-    assert tofield == field_ref.get("name")
-
-
 def test_add_import(ced):
     mainprocess = ced.new_process("Test.MainProcess")
     childprocess = ced.new_process("Test.Processes.ChildProcess")
 
-    mainprocess.add_import(cedobject_factory.make_import(childprocess.path))
+    mainprocess.add_import(of.make_import(childprocess.path))
 
     import_elem = mainprocess.rootnode.findall("ImportDeclaration")[0]
     packagename_elems = import_elem.find("PackageSpecifier").findall("PackageName")
@@ -157,20 +132,6 @@ def test_add_import(ced):
     assert "Processes" == packagename_elems[1].get("name")
     package_entry_ref = import_elem.find("PackageEntryReference")
     assert "ChildProcess" == package_entry_ref.get("name")
-
-
-def assert_equal_elems(wrapper_params, process_params):
-    assert len(wrapper_params) == len(process_params)
-
-    for i in range(len(wrapper_params)):
-        assert_equal_elem(process_params[i], wrapper_params[i])
-
-
-def assert_equal_elem(expected, actual):
-    assert ET.tostring(expected) == ET.tostring(actual)
-
-
-of = cedobject_factory
 
 
 def test_add_all_basic_types_fields(ced):
@@ -196,23 +157,16 @@ def test_add_all_basic_types_fields(ced):
 def test_add_object_field(ced):
     childprocess = ced.new_process("Test.TestChildProcess")
     process = ced.new_process("Test.TestMainProcess")
-    field = make_object_field("TestChildProcess", "childProcess")
+    field = of.make_object_field("TestChildProcess", "childProcess")
     process.add_field(field)
     returned_field = process.get_field("childProcess")
     assert_equal_elem(returned_field, field)
 
 
-def make_object_field(object_type, name):
-    field = of.make_field("Object", name)
-    ET.SubElement(field, "TypeDefinitionReference", name=object_type, nested="false")
-
-    return field
-
-
 def test_add_parameters(ced):
     process = ced.new_process("Test.TestProcessParameter")
-    process.add_field(cedobject_factory.make_field("String", "street"))
-    process.add_field(cedobject_factory.make_field("Number", "streetNumber"))
+    process.add_field(of.make_field("String", "street"))
+    process.add_field(of.make_field("Number", "streetNumber"))
     process.mark_as_parameter("street")
     process.mark_as_parameter("streetNumber")
     assert process.get_field("street") is not None
@@ -223,8 +177,8 @@ def test_add_parameters(ced):
 
 def test_add_result(ced):
     process = ced.new_process("Test.TestProcessResult")
-    process.add_field(cedobject_factory.make_field("String", "street"))
-    process.add_field(cedobject_factory.make_field("Number", "streetNumber"))
+    process.add_field(of.make_field("String", "street"))
+    process.add_field(of.make_field("Number", "streetNumber"))
 
     process.mark_as_result("street")
     process.mark_as_result("streetNumber")
@@ -237,7 +191,7 @@ def test_add_result(ced):
 
 def test_add_as_param_and_result(ced):
     process = ced.new_process("Test.TestProcessParamAndResult")
-    process.add_field(cedobject_factory.make_field("String", "street"))
+    process.add_field(of.make_field("String", "street"))
     process.mark_as_parameter("street")
     process.mark_as_result("street")
 
@@ -258,9 +212,7 @@ def test_add_procedure(ced):
 
 
 def test_add_procedure2(ced):
-    procedure = cedobject_factory.make_procedure(
-        ced.root, "Test.TestBuildProcedure.procedure1"
-    )
+    procedure = of.make_procedure(ced.root, "Test.TestBuildProcedure.procedure1")
     procedure.add_local_vars(age="Integer")
     # process.add_general_procedure(
     #    "setUp",
@@ -269,8 +221,3 @@ def test_add_procedure2(ced):
     #    returns="Integer",
     #    contents="var i=0",
     # )
-
-
-def assert_file_matches_process(ced, process_path, process):
-    loaded_process = ced.open(process_path)
-    assert str(loaded_process) == str(process)

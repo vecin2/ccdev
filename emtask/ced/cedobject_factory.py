@@ -32,7 +32,14 @@ def make_field(field_type, field_name):
     return field
 
 
-def add_process_def_node(parent, name):
+def make_object_field(object_type, name):
+    field = make_field("Object", name)
+    ET.SubElement(field, "TypeDefinitionReference", name=object_type, nested="false")
+
+    return field
+
+
+def make_process_def(name):
     attribs = {
         "appearsInHistory": "true",
         "cyclic": "false",
@@ -49,35 +56,27 @@ def add_process_def_node(parent, name):
         "waitOnChildren": "false",
     }
 
-    return ET.SubElement(parent, "ProcessDefinition", attribs)
+    return ET.Element("ProcessDefinition", attribs)
 
 
-def new_process_etree(name):
+def make_process_pkg_entry(name):
     root = ET.Element("PackageEntry")
-    process_def = add_process_def_node(root, name)
-    ET.SubElement(process_def, "StartNode", displayName="", name="", x="16", y="32")
-    ET.SubElement(process_def, "EndNode", displayName="", name="", x="240", y="32")
-    # transition = ET.SubElement(process_def, "Transition", isExceptionTransition="false")
-    # ET.SubElement(transition, "StartNodeReference", name="")
-    # ET.SubElement(transition, "EndNodeReference", name="")
-    # graph_node_list = ET.SubElement(transition, "GraphNodeList", name="")
-    # ET.SubElement(
-    #    graph_node_list,
-    #    "GraphNode",
-    #    icon="",
-    #    isLabelHolder="true",
-    #    label="",
-    #    name="",
-    #    x="128",
-    #    y="32",
-    # )
-    ET.SubElement(process_def, "BuilderInfo", name="")
-    ET.SubElement(process_def, "TopicScope", defineTopicScope="false", name="")
+    root.append(make_process_def(name))
+    ET.SubElement(
+        make_process_def(name), "StartNode", displayName="", name="", x="16", y="32"
+    )
+    ET.SubElement(
+        make_process_def(name), "EndNode", displayName="", name="", x="240", y="32"
+    )
+    ET.SubElement(make_process_def(name), "BuilderInfo", name="")
+    ET.SubElement(
+        make_process_def(name), "TopicScope", defineTopicScope="false", name=""
+    )
 
     return root
 
 
-def new_procedure_etree(name):
+def make_procedure_elem(name):
     procedure = ET.Element(
         "Procedure",
         designNotes="",
@@ -94,10 +93,16 @@ def new_procedure_etree(name):
     return procedure
 
 
+def make_procedure(root, path):
+    procedure_name = path.rsplit(".", 1)[1]
+
+    return Procedure(root, path, ET.ElementTree(make_procedure_elem(procedure_name)))
+
+
 def make_process(root, path):
     process_name = path.split(".")[-1]
 
-    return Process(root, path, ET.ElementTree(new_process_etree(process_name)))
+    return Process(root, path, ET.ElementTree(make_process_pkg_entry(process_name)))
 
 
 def make_childprocess(process_ref_name, coordinates):
@@ -200,12 +205,6 @@ def make_dataflow_entry(dataflow, fromnode, tonode, from_data=None, to_data=None
     ET.SubElement(to_field, "FieldDefinitionReference", name=to_data)
 
     return dataflow
-
-
-def make_procedure(root, path):
-    procedure_name = path.rsplit(".", 1)[1]
-
-    return Procedure(root, path, ET.ElementTree(new_procedure_etree(procedure_name)))
 
 
 def parse(ced, path):

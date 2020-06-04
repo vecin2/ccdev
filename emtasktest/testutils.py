@@ -2,8 +2,11 @@ import os
 import shutil
 from pathlib import Path
 
+import pytest
+
 import emtask
 from emtask import project
+from emtask.ced.tool import CED
 from emtask.project import EMProject
 
 
