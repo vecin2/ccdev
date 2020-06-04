@@ -6,7 +6,7 @@ from emtasktest.testutils import sample_product, sample_project
 
 @pytest.fixture
 def ced():
-    ced = MultiRootCED(sample_project().get_repo(), sample_product().get_repo())
+    ced = MultiRootCED(sample_project().get_repo(), sample_project().get_product_repo())
     yield ced
 
 
