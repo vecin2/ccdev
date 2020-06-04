@@ -2,11 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
-import pytest
-
-import emtask
 from emtask import project
-from emtask.ced.tool import CED
 from emtask.project import EMProject
 
 
@@ -14,11 +10,15 @@ def sample_project(db_connector=None):
     return SampleProjectBuilder(db_connector=db_connector).build()
 
 
+def sample_product():
+    return SampleProjectBuilder(project_name="sample_product").build()
+
+
 class SampleProjectBuilder(object):
-    def __init__(self, db_connector=None):
+    def __init__(self, project_name="sample_project", db_connector=None):
         self.db_connector = db_connector
         script_dir = os.path.dirname(__file__)
-        path = script_dir + os.sep + "sample_project"
+        path = script_dir + os.sep + project_name
         self._default_root = Path(path)
 
         if self._default_root.exists():
