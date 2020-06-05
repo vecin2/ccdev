@@ -455,14 +455,19 @@ class Process(CEDResource):
     def get_object_imports(self):
         data_flow = self.get_parameters()
         data_flow.extend(self.get_results())
-        dataflow_objectfields = [
-            field for field in data_flow if field.tag == "ObjectField"
-        ]
+        dataflow_objectfields = dict()
 
-        imports = [
-            self.get_object_import(object_field)
-            for object_field in dataflow_objectfields
-        ]
+        for field in data_flow:
+            if field.tag == "ObjectField":
+                dataflow_objectfields[field.get("name")] = field
+
+        imports = []
+
+        for object_field in dataflow_objectfields.values():
+            import_elem = self.get_object_import(object_field)
+
+            if import_elem:  # builtin object or invalid will not have an import
+                imports.append(import_elem)
 
         return imports
 
