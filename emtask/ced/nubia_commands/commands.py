@@ -1,21 +1,7 @@
 from nubia import argument, command, context
 
 import emtask.ced.tasks as ced_task
-from emtask.ced.tool import CED
-
-
-@command
-@argument(
-    "wrapper_path", description="dot separated path where the wrapper will be created",
-)
-@argument(
-    "process_to_wrap",
-    description="dot separated path (e.g CoreContact.Implementation.Verbs.View)",
-)
-def wrap_process(process_to_wrap: str, wrapper_path: str = None):
-    """"""
-    ced = CED("/mnt/c/em/projects/fp8_hfr2/repository/default")
-    ced.open(process_to_wrap).wrapper(wrapper_path)
+from emtask.ced.tool import MultiRootCED
 
 
 @command
@@ -45,5 +31,8 @@ def wrap_process(process_to_wrap: str, wrapper_path: str = None):
     """
     It changes the verb repository path on db and the relevant CED process
     """
-    ced = CED("/mnt/c/em/projects/fp8_hfr2/repository/default")
+    ced = MultiRootCED(
+        "/mnt/c/em/projects/fp8_hfr2/repository/default",
+        "/mnt/c/em/products/agent-desktop_15.3-FP8-HFR2_5.8.2/repository/default",
+    )
     ced.open(process_to_wrap).wrapper(wrapper_path).save()

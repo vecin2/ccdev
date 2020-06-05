@@ -11,7 +11,9 @@ def sample_project(db_connector=None):
 
 
 def sample_product():
-    return SampleProjectBuilder(project_name="sample_product").build()
+    builder = SampleProjectBuilder(project_name="sample_product")
+
+    return builder.build()
 
 
 class SampleProjectBuilder(object):
