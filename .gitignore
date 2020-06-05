@@ -11,8 +11,9 @@ build/
 .ycm_extra_conf.py
 *.log
 *.log.*[0-9]*
-sql_gen/test_templates/.tmp/
 **/.tempfolder/
 **/test_templates
 **/sample_project
+**/sample_product
+.ropeproject
 *.spec

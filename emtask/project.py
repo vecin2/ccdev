@@ -19,9 +19,7 @@ class EMProject(object):
         return self.root / "repository/default"
 
     def get_product_repo(self):
-        return self.root / "../sample_product/repository/default"
-
-        return self.config["product.home"] / "repository/default"
+        return Path(self.config()["product.home"]) / "repository/default"
 
 
 _emproject = None

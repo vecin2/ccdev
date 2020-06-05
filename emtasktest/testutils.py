@@ -28,8 +28,10 @@ class SampleProjectBuilder(object):
     def build(self):
         if self.db_connector:
             conn_details = self._setup_dbconnector()
-            self.append_to_config(namevalue_pairs=conn_details)
+            self.append_to_config(**conn_details)
 
+        product_home = self.get_root() / "../sample_product"
+        self.append_to_config(product_home=str(product_home.resolve()))
         users_dat_content = "admin,admin,Administrator\ngtx_system, gtx_system"
         self.append_to_file("repository/users.dat", contents=users_dat_content)
         self.create_folder("repository/default")
@@ -54,24 +56,24 @@ class SampleProjectBuilder(object):
 
         return self._default_root
 
-    def append_to_config(self, contents=None, lines=None, namevalue_pairs=None):
+    def append_to_config(self, contents=None, lines=None, **namevalue_pairs):
         self.append_to_file(
             "work/config/show-config-txt/localdev-localhost-ad.txt",
             contents=contents,
             lines=lines,
-            namevalue_pairs=namevalue_pairs,
+            **namevalue_pairs,
         )
 
     def append_to_file(
-        self, relativepath, contents=None, lines=None, namevalue_pairs=None
+        self, relativepath, contents=None, lines=None, **namevalue_pairs
     ):
         if not self.realpath(relativepath).exists():
             self.touch_path(relativepath)
         finalpath = self.realpath(relativepath)
 
-        contents = self._get_content(contents, lines, namevalue_pairs)
+        contents = self._get_content(contents=contents, lines=lines, **namevalue_pairs)
         with finalpath.open("a") as f:
-            f.write(contents)
+            f.write("\n" + contents)
 
         return finalpath
 
@@ -82,16 +84,16 @@ class SampleProjectBuilder(object):
 
         return finalpath
 
-    def _get_content(self, contents, lines, namevalue_pairs):
+    def _get_content(self, contents=None, lines=None, **namevalue_pairs):
         if namevalue_pairs:
-            lines = self._convert_to_lines(namevalue_pairs)
+            lines = self._convert_to_lines(**namevalue_pairs)
 
         if lines:
             contents = "\n".join(lines)
 
         return contents
 
-    def _convert_to_lines(self, namevalue_pairs):
+    def _convert_to_lines(self, **namevalue_pairs):
         lines = []
 
         for key, value in namevalue_pairs.items():
