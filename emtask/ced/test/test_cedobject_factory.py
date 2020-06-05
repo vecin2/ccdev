@@ -73,10 +73,10 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     inlineview_field = of.make_object_field("InlineView", "inlineView")
     process.add_field(inlineview_field)
     process.mark_as_parameter("inlineView")
-    street_field = of.make_field("String", "street")
+    street_field = of.make_object_field("IContext", "context")
     process.add_field(street_field)
-    process.mark_as_parameter("street")
-    process.mark_as_result("street")
+    process.mark_as_parameter("context")
+    process.mark_as_result("context")
     output_field = of.make_field("Integer", "output")
     process.add_field(output_field)
     process.mark_as_result("output")
@@ -115,7 +115,7 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
         dataflows[1],
         fromnode="viewContact",
         tonode="fieldStore0",
-        data_entries=[("street", "street"), ("output", "output")],
+        data_entries=[("context", "context"), ("output", "output")],
     )
 
 
