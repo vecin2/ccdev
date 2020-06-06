@@ -21,6 +21,11 @@ class EMProject(object):
     def get_product_repo(self):
         return Path(self.config()["product.home"]) / "repository/default"
 
+    def get_ced(self):
+        return
+
+    # ced = MultiRootCED(sample_project().get_repo(), sample_project().get_product_repo())
+
 
 _emproject = None
 

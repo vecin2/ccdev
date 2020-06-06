@@ -20,3 +20,11 @@ class RewireVerbTask(object):
 
     def _extension_path(self, otb_process_path):
         return "TODO implement"
+
+
+class GenerateProcessWrapper(object):
+    """docstring for ClassName"""
+
+    def __init__(self, arg):
+        super(ClassName, self).__init__()
+        self.arg = arg

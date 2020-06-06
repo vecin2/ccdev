@@ -256,10 +256,6 @@ class Procedure(CEDResource):
     def _get_doctype(self):
         return "Procedure"
 
-    # <ProcedureLocals>
-    #  <IntegerField
-    #      name="age" />
-    # </ProcedureLocals>
     def add_local_vars(self, **kwargs):
         for key, value in kwargs.items():
             local_vars = ET.SubElement(self.rootnode, "ProcedureLocals")
@@ -279,6 +275,10 @@ class Process(CEDResource):
     @property
     def instance_fields(self):
         return self.process_def.find("InstanceFields")
+
+    @property
+    def instance_procedures(self):
+        return self.process_def.find("InstanceProcedures")
 
     @property
     def process_def(self):
@@ -302,18 +302,6 @@ class Process(CEDResource):
             instance_fields = ET.SubElement(process_def, "InstanceFields")
         instance_fields.append(field_node)
 
-    def add_parameters(self, parameters):
-        self.add_fields(parameters)
-        self._mark_as_params_or_results(parameters, "Parameter")
-
-    def _mark_as_params_or_results(self, parameters, tagname):
-        for param in parameters:
-            self._mark_field(param.get("name"), tagname)
-
-    def add_results(self, results):
-        self.add_fields(results)
-        self._mark_as_params_or_results(results, "Result")
-
     def mark_as_parameter(self, field_name):
         self._mark_field(field_name, "Parameter")
 
@@ -321,9 +309,9 @@ class Process(CEDResource):
         self._mark_field(field_name, "Result")
 
     def _mark_field(self, field_name, tagname):
-        process_def = self.rootnode.find("ProcessDefinition")
         attrib = {"from": "", "name": field_name, "to": ""}
-        ET.SubElement(process_def, tagname, attrib)
+        # attrib can not be inline due to key work 'from'
+        ET.SubElement(self.process_def, tagname, attrib)
 
     def get_parameters(self):
         return self._get_params_or_results("Parameter")
@@ -354,16 +342,11 @@ class Process(CEDResource):
         return None
 
     def add_general_procedure(self, procedure_name):
-        process_def = self.rootnode.find("ProcessDefinition")
-        instance_procedures = process_def.find("InstanceProcedures")
-
-        if not instance_procedures:
-            instance_procedures = ET.SubElement(
-                process_def, "InstanceProcedures", name=""
-            )
+        if not self.instance_procedures:
+            ET.SubElement(self.process_def, "InstanceProcedures", name="")
 
         ET.SubElement(
-            instance_procedures, "Procedure", name=procedure_name, nested="true"
+            self.instance_procedures, "Procedure", name=procedure_name, nested="true"
         )
         self.procedures.append(
             make_procedure(self.root, self.path + "." + procedure_name)
@@ -376,17 +359,6 @@ class Process(CEDResource):
 
         return None
 
-    # <ChildProcess
-    #    displayName=""
-    #    executeAsAsynchronous="false"
-    #    name="viewContact"
-    #    waitOnParent="false"
-    #    x="154"
-    #    y="32">
-    #  <ProcessDefinitionReference
-    #      name="ViewContact"
-    #      nested="false" />
-    # </ChildProcess>
     def name(self):
         return self.process_def.get("name")
 
@@ -396,80 +368,13 @@ class Process(CEDResource):
         return name[0].lower() + name[1:]
 
     def wrapper(self, path):
-        wrapper = make_process(self.root, path)
-        wrapper.add_imports(deepcopy(self.get_object_imports()))
-        wrapper.add_fields(deepcopy(self.get_params_and_results()))
-
-        for field in self.get_parameters():
-            wrapper.mark_as_parameter(field.get("name"))
-
-        for field in self.get_results():
-            wrapper.mark_as_result(field.get("name"))
-
-        childprocess = make_childprocess(self.name(), ("142", "32"))
-        wrapper.process_def.append(childprocess)
-        wrapper.process_def.append(
-            make_start_transition(childprocess.get("name"), ("70", "32"))
-        )
-        wrapper.process_def.append(
-            make_end_transition(childprocess.get("name"), ("202", "32"))
-        )
-        wrapper.process_def.append(make_fieldstore("fieldStore0", ("142", "176")))
-        dataflow = make_dataflow("fieldStore0", self.instance_name(), ("48", "144"))
-        parameters = wrapper.get_parameters()
-        tonode = self.instance_name()
-        fromnode = "fieldStore0"
-
-        for param in parameters:
-            make_dataflow_entry(
-                dataflow,
-                fromnode,
-                tonode,
-                from_data=param.get("name"),
-                to_data=param.get("name"),
-            )
-        wrapper.process_def.append(dataflow)
-
-        dataflow = make_dataflow(self.instance_name(), "fieldStore0", ("240", "144"))
-
-        for result in wrapper.get_results():
-            make_dataflow_entry(
-                dataflow,
-                self.instance_name(),
-                "fieldStore0",
-                from_data=result.get("name"),
-                to_data=result.get("name"),
-            )
-        wrapper.process_def.append(dataflow)
-
-        return wrapper
+        return GenerateProcessWrapper(self, path).run()
 
     def get_params_and_results(self):
-        wrapper_fields = list(self.get_parameters())
-        wrapper_fields.extend(
-            field for field in self.get_results() if field not in wrapper_fields
-        )
+        result = list(self.get_parameters())
+        result.extend(field for field in self.get_results() if field not in result)
 
-        return wrapper_fields
-
-    def get_object_imports(self):
-        data_flow = self.get_parameters()
-        data_flow.extend(self.get_results())
-        dataflow_objectfields = dict()
-
-        for field in data_flow:
-            if field.tag == "ObjectField":
-                dataflow_objectfields[field.get("name")] = field
-
-        imports = []
-
-        for object_field in dataflow_objectfields.values():
-            import_elem = self.get_object_import(object_field)
-
-            if import_elem:  # builtin object or invalid will not have an import
-                imports.append(import_elem)
-
-        return imports
+        return result
 
     def add_imports(self, imports):
         for import_elem in imports:
@@ -498,3 +403,85 @@ class Process(CEDResource):
             return False
 
         return str(self) == str(other)
+
+    def mark_all_as_parameters(self, fields):
+        for field in fields:
+            self.mark_as_parameter(field.get("name"))
+
+    def mark_all_as_results(self, fields):
+        for field in fields:
+            self.mark_as_result(field.get("name"))
+
+
+class GenerateProcessWrapper(object):
+    def __init__(self, process, path):
+        self.process = process
+        self.path = path
+
+    def run(self):
+        wrapper = make_process(self.process.root, self.path)
+        wrapper.add_imports(deepcopy(self._get_params_and_results_imports()))
+        wrapper.add_fields(deepcopy(self.process.get_params_and_results()))
+        wrapper.mark_all_as_parameters(self.process.get_parameters())
+        wrapper.mark_all_as_results(self.process.get_results())
+
+        childprocess = make_childprocess(self.process.name(), ("142", "32"))
+        wrapper.process_def.append(childprocess)
+        wrapper.process_def.append(
+            make_start_transition(childprocess.get("name"), ("70", "32"))
+        )
+        wrapper.process_def.append(
+            make_end_transition(childprocess.get("name"), ("202", "32"))
+        )
+        wrapper.process_def.append(make_fieldstore("fieldStore0", ("142", "176")))
+        dataflow = make_dataflow(
+            "fieldStore0", self.process.instance_name(), ("48", "144")
+        )
+        parameters = wrapper.get_parameters()
+        tonode = self.process.instance_name()
+        fromnode = "fieldStore0"
+
+        for param in parameters:
+            make_dataflow_entry(
+                dataflow,
+                fromnode,
+                tonode,
+                from_data=param.get("name"),
+                to_data=param.get("name"),
+            )
+        wrapper.process_def.append(dataflow)
+
+        dataflow = make_dataflow(
+            self.process.instance_name(), "fieldStore0", ("240", "144")
+        )
+
+        for result in wrapper.get_results():
+            make_dataflow_entry(
+                dataflow,
+                self.process.instance_name(),
+                "fieldStore0",
+                from_data=result.get("name"),
+                to_data=result.get("name"),
+            )
+        wrapper.process_def.append(dataflow)
+
+        return wrapper
+
+    def _get_params_and_results_imports(self):
+        fields = self.process.get_params_and_results()
+
+        return self.get_fields_imports(fields)
+
+    def get_fields_imports(self, fields):
+        imports = []
+
+        for object_field in self.filter_objects(fields):
+            import_elem = self.process.get_object_import(object_field)
+
+            if import_elem:  # builtin object or invalid will not have an import
+                imports.append(import_elem)
+
+        return imports
+
+    def filter_objects(self, fields):
+        return [field for field in fields if field.tag == "ObjectField"]
