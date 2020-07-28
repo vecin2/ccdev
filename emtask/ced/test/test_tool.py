@@ -22,3 +22,12 @@ def test_open_product_process(product_ced, ced):
     process.save()
     ced.open(process_path)
     assert_file_matches_process(ced, process_path, process)
+
+
+@pytest.mark.skip
+def test_save_add_process_to_project():
+    product_ced = CED("product")
+    process_path = "PRJContactHistory.Implementation.Contact.Verbs.CreateContact"
+    process = product_ced.new_process(process_path)
+    process.save()
+    assert process.realpath()

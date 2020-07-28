@@ -298,7 +298,7 @@ class Process(CEDResource):
         process_def = self.rootnode.find("ProcessDefinition")
         instance_fields = process_def.find("InstanceFields")
 
-        if not instance_fields:
+        if instance_fields is None:
             instance_fields = ET.SubElement(process_def, "InstanceFields")
         instance_fields.append(field_node)
 
@@ -334,7 +334,7 @@ class Process(CEDResource):
             if node.tag == "InstanceFields":
                 instance_fields = node
 
-        if instance_fields:
+        if instance_fields is not None:
             for field in instance_fields.iter():
                 if field.get("name") == name:
                     return field
@@ -478,7 +478,9 @@ class GenerateProcessWrapper(object):
         for object_field in self.filter_objects(fields):
             import_elem = self.process.get_object_import(object_field)
 
-            if import_elem:  # builtin object or invalid will not have an import
+            if (
+                import_elem is not None
+            ):  # builtin object or invalid will not have an import
                 imports.append(import_elem)
 
         return imports

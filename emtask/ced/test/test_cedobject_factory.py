@@ -87,8 +87,9 @@ def test_process_wrapper_when_process_has_object_params_imports_object(ced):
     imported_process.save()
     wrapper_process.save()
 
-    # check wrapper has field inlineView as parameter and imports the neccesary
+    assert ced.open(wrapper_path)
     wrapper_assertor = ProcessAssertor(wrapper_process)
+    # check wrapper has field inlineView as parameter and imports the neccesary
     wrapper_assertor.assert_params([inlineview_field, street_field])
     wrapper_assertor.assert_results([street_field, output_field])
     wrapper_assertor.assert_imports([inlineview_import])
