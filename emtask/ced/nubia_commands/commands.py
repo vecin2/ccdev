@@ -1,4 +1,5 @@
 from nubia import argument, command, context
+from termcolor import cprint
 
 import emtask.ced.tasks as ced_task
 from emtask.ced.tool import MultiRootCED
